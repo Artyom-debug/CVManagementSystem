@@ -1,0 +1,80 @@
+using Application.Common.Models;
+using Application.Interfaces;
+using FluentValidation;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+
+namespace Application.Commands.Attribute;
+
+public sealed record AttributeVersionInput(Guid AttributeId, int Version);
+
+public sealed record DeleteAttributeRangeCommand(
+    IReadOnlyCollection<AttributeVersionInput> Attributes) : IRequest<Result>;
+
+public sealed class DeleteAttributeRangeCommandValidator
+    : AbstractValidator<DeleteAttributeRangeCommand>
+{
+    public DeleteAttributeRangeCommandValidator()
+    {
+        RuleFor(command => command.Attributes)
+            .NotEmpty()
+            .Must(attributes => attributes is null ||
+                attributes.Select(attribute => attribute.AttributeId).Distinct().Count() == attributes.Count)
+            .WithMessage("Attribute ids must be unique.");
+
+        RuleForEach(command => command.Attributes).ChildRules(attribute =>
+        {
+            attribute.RuleFor(item => item.AttributeId).NotEmpty();
+            attribute.RuleFor(item => item.Version).GreaterThanOrEqualTo(0);
+        });
+    }
+}
+
+internal sealed class DeleteAttributeRangeCommandHandler
+    : IRequestHandler<DeleteAttributeRangeCommand, Result>
+{
+    private readonly IApplicationDbContext _context;
+
+    public DeleteAttributeRangeCommandHandler(IApplicationDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<Result> Handle(
+        DeleteAttributeRangeCommand request,
+        CancellationToken cancellationToken)
+    {
+        var requestedVersions = request.Attributes
+            .ToDictionary(attribute => attribute.AttributeId, attribute => attribute.Version);
+
+        var attributes = await _context.Attributes
+            .Where(attribute => requestedVersions.Keys.Contains(attribute.Id))
+            .ToListAsync(cancellationToken);
+
+        if (attributes.Count != requestedVersions.Count)
+        {
+            var foundIds = attributes.Select(attribute => attribute.Id).ToHashSet();
+            var missingIds = requestedVersions.Keys.Where(id => !foundIds.Contains(id));
+            return Result.Failure($"Attributes [{string.Join(", ", missingIds)}] were not found.");
+        }
+
+        if (attributes.Any(attribute => attribute.IsSystem))
+            return Result.Failure("System attributes cannot be included in the regular operation.");
+
+        if (attributes.Any(attribute => attribute.Version != requestedVersions[attribute.Id]))
+            return Result.Failure("One or more attributes were changed by another request. Reload them and try again.");
+
+        _context.Attributes.RemoveRange(attributes);
+
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result.Failure("One or more attributes were changed by another request. Reload them and try again.");
+        }
+
+        return Result.Success();
+    }
+}

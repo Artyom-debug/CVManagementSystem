@@ -13,36 +13,16 @@ public sealed class AccessRule : ValueObject
 
     public AccessRuleValue Value { get; private set; } = null!;
 
-    public string? StringValue => Value.StringValue;
-
-    public double? NumericValue => Value.NumericValue;
-
-    public DateOnly? DateValue => Value.DateValue;
-
-    public DateOnly? PeriodStart => Value.PeriodStart;
-
-    public DateOnly? PeriodEnd => Value.PeriodEnd;
-
-    public bool? BooleanValue => Value.BooleanValue;
-
-    public Guid? DropdownOptionId => Value.DropdownOptionId;
-
     private AccessRule()
     {
     }
 
-    private AccessRule(
-        Guid attributeId,
-        AttributeType attributeType,
-        Operator op)
+    private AccessRule(Guid attributeId, AttributeType attributeType, Operator op)
     {
         if (attributeId == Guid.Empty)
             throw new ArgumentException("Attribute id cannot be empty", nameof(attributeId));
         if (!Enum.IsDefined(attributeType))
-            throw new ArgumentOutOfRangeException(
-                nameof(attributeType),
-                attributeType,
-                "Unknown attribute type");
+            throw new ArgumentOutOfRangeException(nameof(attributeType), attributeType, "Unknown attribute type");
         if (!Enum.IsDefined(op))
             throw new ArgumentOutOfRangeException(nameof(op), op, "Unknown access rule operator");
 

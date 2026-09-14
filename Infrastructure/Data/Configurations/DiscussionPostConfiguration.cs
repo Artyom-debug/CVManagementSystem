@@ -8,7 +8,8 @@ public sealed class DiscussionPostConfiguration : IEntityTypeConfiguration<Discu
 {
     public void Configure(EntityTypeBuilder<DiscussionPost> builder)
     {
-        builder.HasKey(post => post.Id);
+        builder.ToTable("DiscussionPosts");
+        builder.ConfigureBaseEntity();
 
         builder.Property(post => post.AuthorId)
             .HasMaxLength(450)

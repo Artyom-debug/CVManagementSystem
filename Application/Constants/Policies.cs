@@ -1,0 +1,17 @@
+namespace Application.Constants;
+
+public static class Policies
+{
+    public const string ViewAttributeLibrary = nameof(ViewAttributeLibrary);
+    public const string ManageAttributeLibrary = nameof(ManageAttributeLibrary);
+    public const string ManageSystemAttributes = nameof(ManageSystemAttributes);
+
+    public const string ViewTagLibrary = nameof(ViewTagLibrary);
+    public const string ManageTagLibrary = nameof(ManageTagLibrary);
+
+    public const string ManageCandidateProfile = nameof(ManageCandidateProfile);
+    public const string ViewFullCandidateProfile = nameof(ViewFullCandidateProfile);
+    public const string ViewPublicCandidateProfile = nameof(ViewPublicCandidateProfile);
+
+    public const string ManageCV = nameof(ManageCV);
+}

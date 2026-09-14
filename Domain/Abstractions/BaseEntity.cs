@@ -9,7 +9,7 @@ public abstract class BaseEntity
     public Guid Id { get; protected set; } = Guid.NewGuid();
 
     [ConcurrencyCheck]
-    public int Version { get; set; }
+    public int Version { get; private set; }
 
     private readonly List<BaseEvent> _domainEvents = [];
 

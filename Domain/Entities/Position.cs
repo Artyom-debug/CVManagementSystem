@@ -156,7 +156,7 @@ public sealed class Position : BaseEntity
             IsPublic = true;
     }
 
-    public void AddPositionAttribute(Guid attributeId, int displayOrder, bool isRequired)
+    public void AddPositionAttribute(Guid attributeId, int displayOrder)
     {
         if (attributeId == Guid.Empty)
             throw new ArgumentException("Attribute id cannot be empty", nameof(attributeId));
@@ -169,7 +169,7 @@ public sealed class Position : BaseEntity
                 "Display order cannot be negative");
         if (_positionAttributes.Any(item => item.DisplayOrder == displayOrder))
             throw new InvalidOperationException("Position already contains an attribute with this display order");
-        var positionAttribute = new PositionAttribute(this.Id, attributeId, displayOrder, isRequired);
+        var positionAttribute = new PositionAttribute(this.Id, attributeId, displayOrder);
         _positionAttributes.Add(positionAttribute);
     }
 
@@ -221,14 +221,6 @@ public sealed class Position : BaseEntity
         _positionAttributes.RemoveAll(item => idsToRemove.Contains(item.AttributeId));
     }
 
-    public void SetPositionAttributeRequired(Guid attributeId, bool isRequired)
-    {
-        var positionAttribute = FindPositionAttribute(attributeId);
-        if (positionAttribute.IsRequired == isRequired)
-            return;
-        positionAttribute.SetRequired(isRequired);
-    }
-
     public void UpdatePositionAttributeOrders(IReadOnlyDictionary<Guid, int> displayOrders)
     {
         ArgumentNullException.ThrowIfNull(displayOrders);
@@ -247,36 +239,35 @@ public sealed class Position : BaseEntity
         }
     }
 
-    public void AddTag(string tag)
+    public void AddTag(Tag tag)
     {
-        if (string.IsNullOrWhiteSpace(tag)) 
-            throw new ArgumentException("Tag cannot be empty", nameof(tag));
-        var newTag = new Tag(tag);
-        if(_tags.Contains(newTag))
+        ArgumentNullException.ThrowIfNull(tag);
+        if (_tags.Contains(tag))
             throw new InvalidOperationException("Position already contains this tag");
-        _tags.Add(newTag);
+        _tags.Add(tag);
     }
 
-    public void AddTagRange(IReadOnlyCollection<string> names)
+    public void AddTagRange(IReadOnlyCollection<Tag> tags)
     {
-        ArgumentNullException.ThrowIfNull(names);
-        if (names.Count == 0)
-            throw new ArgumentException("Project tags collection cannot be empty", nameof(names));
+        ArgumentNullException.ThrowIfNull(tags);
+        if (tags.Count == 0)
+            throw new ArgumentException("Position tags collection cannot be empty", nameof(tags));
+        if (tags.Any(tag => tag is null))
+            throw new ArgumentException("Tags cannot contain null values", nameof(tags));
 
-        ValidateTagNames(names);
-
-        var newTags = names.Select(name => new Tag(name)).ToHashSet();
+        var newTags = tags.ToHashSet();
+        if (newTags.Count != tags.Count)
+            throw new ArgumentException("Position tags collection contains duplicates", nameof(tags));
         if (_tags.Any(newTags.Contains))
             throw new InvalidOperationException("Position already contains one or more selected tags");
-        var tagsToAdd = names.Select(name => new Tag(name));
-        _tags.AddRange(tagsToAdd);
+        _tags.AddRange(tags);
     }
 
     public void RemoveTag(string tag)
     {
         if (string.IsNullOrWhiteSpace(tag))
             throw new ArgumentException("Tag cannot be empty", nameof(tag));
-        var existTag = _tags.FirstOrDefault(t => t.Name == tag);
+        var existTag = _tags.FirstOrDefault(existingTag => existingTag == new Tag(tag));
         if (existTag == null)
             throw new InvalidOperationException("Position doesn't contains this tag");
         _tags.Remove(existTag);

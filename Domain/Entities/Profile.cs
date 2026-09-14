@@ -52,11 +52,20 @@ public sealed class Profile : BaseEntity
         MarkUpdated();
     }
 
-    public void AddNewProject(string name, string description, Period period)
+    public void AddNewProject(
+        string name,
+        string? description,
+        Period period,
+        IReadOnlyCollection<Tag> tags)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Project name cannot be empty", nameof(name));
-        var newProject = new Project(name, description, period, this.Id);
+
+        ArgumentNullException.ThrowIfNull(period);
+        ArgumentNullException.ThrowIfNull(tags);
+
+        var newProject = new Project(name, description ?? string.Empty, period, this.Id);
+        newProject.AddTagRange(tags);
         _projects.Add(newProject);
         MarkUpdated();
     }
@@ -76,7 +85,7 @@ public sealed class Profile : BaseEntity
         MarkUpdated();
     }
 
-    public void SetAttributeValue(Guid attributeId, object? value, AttributeType type)
+    public void SetAttributeValue(Guid attributeId, object? value, AttributeType type, int order)
     {
         var attributeValue = _attributeValues.FirstOrDefault(a => a.AttributeId == attributeId);
         if (attributeValue != null)
@@ -85,7 +94,7 @@ public sealed class Profile : BaseEntity
             MarkUpdated();
             return;
         }
-        var newAttributeValue = new ProfileAttributeValue(this.Id, attributeId);
+        var newAttributeValue = new ProfileAttributeValue(this.Id, attributeId, order);
         newAttributeValue.UpdateAttributeValue(value, type);
         _attributeValues.Add(newAttributeValue);
         MarkUpdated();
@@ -109,15 +118,15 @@ public sealed class Profile : BaseEntity
             MarkUpdated();
     }
 
-    public void AddProjectTag(Guid projectId, string tag)
-    {
-        if (FindProject(projectId).AddTag(tag))
-            MarkUpdated();
-    }
+    //public void AddProjectTag(Guid projectId, Tag tag)
+    //{
+    //    if (FindProject(projectId).AddTag(tag))
+    //        MarkUpdated();
+    //}
 
     public void AddProjectTagRange(
         Guid projectId,
-        IReadOnlyCollection<string> tags)
+        IReadOnlyCollection<Tag> tags)
     {
         if (FindProject(projectId).AddTagRange(tags))
             MarkUpdated();

@@ -10,13 +10,11 @@ public sealed class PositionAttribute : BaseEntity
 
     public int DisplayOrder { get; private set; }
 
-    public bool IsRequired { get; private set; }
-
     public Position? Position { get; private set; }
 
     public Attribute? Attribute { get; private set; }
 
-    public PositionAttribute(Guid positionId, Guid attributeId, int displayOrder, bool isRequired)
+    public PositionAttribute(Guid positionId, Guid attributeId, int displayOrder)
     {
         if (positionId == Guid.Empty)
             throw new ArgumentException("Position id cannot be empty", nameof(positionId));
@@ -27,7 +25,6 @@ public sealed class PositionAttribute : BaseEntity
         PositionId = positionId;
         AttributeId = attributeId;
         DisplayOrder = displayOrder;
-        IsRequired = isRequired;
     }
 
     public void ChangeDisplayOrder(int displayOrder)
@@ -39,20 +36,4 @@ public sealed class PositionAttribute : BaseEntity
         this.DisplayOrder = displayOrder;
     }
 
-    public void SetRequired(bool isRequired)
-    {
-        if (IsRequired == isRequired)
-            return;
-        IsRequired = isRequired;
-    }
-
-    public void UpdateDisplaySettings(int displayOrder, bool isRequired)
-    {
-        if (displayOrder < 0)
-            throw new ArgumentOutOfRangeException(nameof(displayOrder), displayOrder, "Display order cannot be negative");
-        if (DisplayOrder == displayOrder && IsRequired == isRequired)
-            return;
-        DisplayOrder = displayOrder;
-        IsRequired = isRequired;
-    }
 }

@@ -58,15 +58,6 @@ public sealed class Attribute : BaseEntity
         Description = description;
     }
 
-    public void RemoveDescription()
-    {
-        if (this.IsSystem)
-            throw new InvalidOperationException("Can't remove description of system attribute");
-        if (Description.Length == 0)
-            return;
-        Description = string.Empty;
-    }
-
     public void MarkAsSystemAttribute()
     {
         if(this.IsSystem)
@@ -132,9 +123,9 @@ public sealed class Attribute : BaseEntity
 
     public void RemoveOption(Guid optionId)
     {
-        if (IsSystem) 
+        if (IsSystem)
             throw new InvalidOperationException("Can't modify system attribute");
-        if (Type != AttributeType.Dropdown) 
+        if (Type != AttributeType.Dropdown)
             throw new InvalidOperationException("This attribute doesn't support dropdown options");
         if (optionId == Guid.Empty)
             throw new ArgumentException("Option id cannot be empty", nameof(optionId));
@@ -148,9 +139,9 @@ public sealed class Attribute : BaseEntity
 
     public void RemoveOptionRange(IReadOnlyCollection<Guid> optionIds)
     {
-        if (IsSystem) 
+        if (IsSystem)
             throw new InvalidOperationException("Can't modify system attribute");
-        if (Type != AttributeType.Dropdown) 
+        if (Type != AttributeType.Dropdown)
             throw new InvalidOperationException("This attribute doesn't support dropdown options");
         ArgumentNullException.ThrowIfNull(optionIds);
         if (optionIds.Count == 0)

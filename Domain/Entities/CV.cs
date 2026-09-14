@@ -41,17 +41,13 @@ public sealed class CV : BaseEntity
         PositionId = positionId;
     }
 
-    public void Publish(IReadOnlyCollection<Guid> missingRequiredAttributeIds)
+    public void Publish()
     {
-        ArgumentNullException.ThrowIfNull(missingRequiredAttributeIds);
 
         if (Status == Status.Published)
             throw new InvalidOperationException("This CV has already published");
         if (Status == Status.Deleted)
             throw new InvalidOperationException("Cannot publish a deleted CV");
-        if (missingRequiredAttributeIds.Count > 0)
-            throw new InvalidOperationException(
-                "Cannot publish a CV while required attributes are empty");
 
         Status = Status.Published;
         PublishedAt = DateTime.UtcNow;

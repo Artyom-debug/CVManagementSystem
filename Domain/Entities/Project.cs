@@ -19,6 +19,12 @@ public sealed class Project : BaseEntity
 
     public IReadOnlyCollection<Tag> Tags => _tags.AsReadOnly();
 
+    private Project()
+    {
+        Name = null!;
+        Period = null!;
+    }
+
     public Project(string name, string description, Period period, Guid profileId)
     {
         if(string.IsNullOrWhiteSpace(name)) 
@@ -64,11 +70,9 @@ public sealed class Project : BaseEntity
         return true;
     }
 
-    internal bool AddTag(string name)
+    internal bool AddTag(Tag tag)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("Tag cannot be empty", nameof(name));
-        var tag = new Tag(name);
+        ArgumentNullException.ThrowIfNull(tag);
         if (_tags.Contains(tag))
             return false;
 
@@ -76,17 +80,16 @@ public sealed class Project : BaseEntity
         return true;
     }
 
-    internal bool AddTagRange(IReadOnlyCollection<string> names)
+    internal bool AddTagRange(IReadOnlyCollection<Tag> tags)
     {
-        ArgumentNullException.ThrowIfNull(names);
-        if (names.Count == 0)
+        ArgumentNullException.ThrowIfNull(tags);
+        if (tags.Count == 0)
             return false;
-        if (names.Any(string.IsNullOrWhiteSpace))
-            throw new ArgumentException("Tag cannot be empty", nameof(names));
+        if (tags.Any(tag => tag is null))
+            throw new ArgumentException("Tags cannot contain null values", nameof(tags));
 
         var existingTags = _tags.ToHashSet();
-        var tagsToAdd = names
-            .Select(name => new Tag(name))
+        var tagsToAdd = tags
             .Distinct()
             .Where(tag => !existingTags.Contains(tag))
             .ToList();

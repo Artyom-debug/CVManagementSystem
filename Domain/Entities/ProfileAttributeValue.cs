@@ -20,6 +20,8 @@ public sealed class ProfileAttributeValue : BaseEntity
 
     public bool? CheckboxValue { get; private set; } = null;
 
+    public int Order { get; private set; }
+
     public Guid? DropdownOptionId { get; private set; }
 
     public AttributeOptions? DropdownOption { get; private set; }
@@ -32,13 +34,16 @@ public sealed class ProfileAttributeValue : BaseEntity
 
     public Attribute? Attribute { get; private set; }
 
-    public ProfileAttributeValue(Guid profileId, Guid attributeId)
+    public ProfileAttributeValue(Guid profileId, Guid attributeId, int order)
     {
         if (profileId == Guid.Empty)
             throw new ArgumentException("Profile id cannot be empty", nameof(profileId));
         if (attributeId == Guid.Empty)
             throw new ArgumentException("Attribute id cannot be empty", nameof(attributeId));
+        if (order < 0)
+            throw new ArgumentOutOfRangeException("Attribute order cannot be negative", nameof(order));
 
+        Order = order;
         ProfileId = profileId;
         AttributeId = attributeId;
     }
