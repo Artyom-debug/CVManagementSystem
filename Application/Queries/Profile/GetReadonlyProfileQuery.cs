@@ -24,16 +24,28 @@ internal sealed class GetReadonlyProfileQueryHandler
     : IRequestHandler<GetReadonlyProfileQuery, ReadonlyProfileDto>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICacheService _cache;
 
-    public GetReadonlyProfileQueryHandler(IApplicationDbContext context)
+    public GetReadonlyProfileQueryHandler(
+        IApplicationDbContext context,
+        ICacheService cache)
     {
         _context = context;
+        _cache = cache;
     }
 
     public async Task<ReadonlyProfileDto> Handle(
         GetReadonlyProfileQuery request,
         CancellationToken cancellationToken)
     {
+        var cacheKey = $"profile-readonly:v1:{request.ProfileId}";
+        var cachedProfile = await _cache.GetAsync<ReadonlyProfileDto>(
+            cacheKey,
+            cancellationToken);
+
+        if (cachedProfile is not null)
+            return cachedProfile;
+
         var profile = await _context.Profiles
             .AsNoTracking()
             .Where(profile => profile.Id == request.ProfileId)
@@ -111,12 +123,28 @@ internal sealed class GetReadonlyProfileQueryHandler
                 cv.PublishedAt))
             .ToListAsync(cancellationToken);
 
-        return new ReadonlyProfileDto(
+        var result = new ReadonlyProfileDto(
             profile.Id,
             profile.CreatedAt,
             profile.UpdatedAt,
             attributes,
             projects,
             cvs);
+
+        var dependencies = attributes
+            .Select(attribute => $"attribute:{attribute.Attribute.Id}")
+            .Append($"profile:{profile.Id}")
+            .Concat(cvs.Select(cv => $"position:{cv.PositionId}"))
+            .Distinct()
+            .ToArray();
+
+        await _cache.SetAsync(
+            cacheKey,
+            result,
+            TimeSpan.FromMinutes(10),
+            cancellationToken,
+            dependencies);
+
+        return result;
     }
 }

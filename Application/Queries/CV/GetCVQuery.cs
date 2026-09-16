@@ -24,13 +24,16 @@ internal sealed class GetCVQueryHandler
 {
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
+    private readonly ICacheService _cache;
 
     public GetCVQueryHandler(
         IApplicationDbContext context,
-        IUser user)
+        IUser user,
+        ICacheService cache)
     {
         _context = context;
         _user = user;
+        _cache = cache;
     }
 
     public async Task<CVDetailsDto> Handle(
@@ -71,6 +74,14 @@ internal sealed class GetCVQueryHandler
 
         if (!isOwner && !isAdministrator && !(isRecruiter && cv.Status == Status.Published))
             throw new ForbiddenAccessException("You do not have permission to view this CV.");
+
+        var cacheKey = $"cv-details:v1:{cv.Id}:user:{_user.Id}";
+        var cachedCV = await _cache.GetAsync<CVDetailsDto>(
+            cacheKey,
+            cancellationToken);
+
+        if (cachedCV is not null)
+            return cachedCV;
 
         var attributes = await _context.PositionAttributes
             .AsNoTracking()
@@ -143,7 +154,7 @@ internal sealed class GetCVQueryHandler
                 .ToListAsync(cancellationToken);
         }
 
-        return new CVDetailsDto(
+        var result = new CVDetailsDto(
             cv.Id,
             cv.Version,
             cv.ProfileId,
@@ -159,5 +170,22 @@ internal sealed class GetCVQueryHandler
             projects,
             cv.LikesCount,
             cv.IsLikedByCurrentUser);
+
+        var dependencies = attributes
+            .Select(attribute => $"attribute:{attribute.Attribute.Id}")
+            .Append($"cv:{cv.Id}")
+            .Append($"profile:{cv.ProfileId}")
+            .Append($"position:{cv.PositionId}")
+            .Distinct()
+            .ToArray();
+
+        await _cache.SetAsync(
+            cacheKey,
+            result,
+            TimeSpan.FromMinutes(10),
+            cancellationToken,
+            dependencies);
+
+        return result;
     }
 }

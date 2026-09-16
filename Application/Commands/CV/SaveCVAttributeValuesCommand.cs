@@ -3,6 +3,7 @@ using Application.Constants;
 using Application.Dtos;
 using Application.Interfaces;
 using Domain.Enums;
+using Domain.Events;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -74,9 +75,6 @@ internal sealed class SaveCVAttributeValuesCommandHandler
         if (cv.Status == Status.Deleted)
             return Result.Failure("A deleted CV cannot be modified.");
 
-        if (profile.Version != request.ProfileVersion)
-            return Result.Failure("The profile was changed by another request. Reload it and try again.");
-
         var attributeIds = request.Values
             .Select(value => value.AttributeId)
             .ToArray();
@@ -145,6 +143,9 @@ internal sealed class SaveCVAttributeValuesCommandHandler
                 item.Attribute.Type,
                 order);
         }
+
+        profile.AddDomainEvent(new ProfileChangedEvent(profile.Id));
+        _context.SetOriginalVersion(profile, request.ProfileVersion);
 
         try
         {

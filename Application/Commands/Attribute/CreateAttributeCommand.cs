@@ -6,6 +6,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Domain.Events;
 
 namespace Application.Commands.Attribute;
 
@@ -80,6 +81,7 @@ public sealed class CreateAttributeCommandHandler : IRequestHandler<CreateAttrib
             attribute.AddOptionsRange(request.Options ?? []);
 
         _context.Attributes.Add(attribute);
+        attribute.AddDomainEvent(new AttributeAddedEvent());
         await _context.SaveChangesAsync(cancellationToken);
 
         return Result.Success(attribute.Version);

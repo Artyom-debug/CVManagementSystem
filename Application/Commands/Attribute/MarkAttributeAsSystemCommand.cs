@@ -1,6 +1,7 @@
 using Application.Common.Models;
 using Application.Dtos;
 using Application.Interfaces;
+using Domain.Events;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -41,13 +42,12 @@ internal sealed class MarkAttributeAsSystemCommandHandler
         if (attribute is null)
             return Result.Failure($"Attribute '{request.AttributeId}' was not found.");
 
-        if (attribute.Version != request.Version)
-            return Result.Failure("The attribute was changed by another request. Reload it and try again.");
-
         if (attribute.IsSystem)
             return Result.Success(attribute.Version);
 
+        _context.SetOriginalVersion(attribute, request.Version);
         attribute.MarkAsSystemAttribute();
+        attribute.AddDomainEvent(new AttributesChangedEvent(new Guid[] { attribute.Id }));
 
         try
         {

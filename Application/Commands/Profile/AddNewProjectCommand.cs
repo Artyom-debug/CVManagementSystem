@@ -1,6 +1,7 @@
 using Application.Common.Models;
 using Application.Constants;
 using Application.Interfaces;
+using Domain.Events;
 using Domain.Value_Objects;
 using FluentValidation;
 using MediatR;
@@ -83,9 +84,6 @@ internal sealed class AddNewProjectCommandHandler
         if (!canManageProfile)
             return Result.Failure("You do not have permission to modify this profile.");
 
-        if (profile.Version != request.Version)
-            return Result.Failure("The profile was changed by another request. Reload it and try again.");
-
         var period = request.EndDate.HasValue
             ? new Period(request.StartDate, request.EndDate.Value)
             : new Period(request.StartDate);
@@ -106,6 +104,9 @@ internal sealed class AddNewProjectCommandHandler
             request.Description,
             period,
             tags);
+
+        profile.AddDomainEvent(new ProfileChangedEvent(profile.Id));
+        _context.SetOriginalVersion(profile, request.Version);
 
         try
         {

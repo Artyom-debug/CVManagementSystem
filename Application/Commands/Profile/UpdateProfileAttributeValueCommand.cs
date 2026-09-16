@@ -3,6 +3,7 @@ using Application.Constants;
 using Application.Dtos;
 using Application.Interfaces;
 using Domain.Enums;
+using Domain.Events;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -62,9 +63,6 @@ internal sealed class UpdateProfileAttributeValueCommandHandler
         if (!canManageProfile)
             return Result.Failure("You do not have permission to modify this profile.");
 
-        if (profile.Version != request.Version)
-            return Result.Failure("The profile was changed by another request. Reload it and try again.");
-
         var currentValue = profile.AttributeValues
             .SingleOrDefault(value => value.AttributeId == request.Value.AttributeId);
 
@@ -102,6 +100,9 @@ internal sealed class UpdateProfileAttributeValueCommandHandler
             value,
             attribute.Type,
             currentValue.Order);
+
+        profile.AddDomainEvent(new ProfileChangedEvent(profile.Id));
+        _context.SetOriginalVersion(profile, request.Version);
 
         try
         {

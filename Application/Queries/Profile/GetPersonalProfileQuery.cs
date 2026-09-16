@@ -14,13 +14,16 @@ internal sealed class GetPersonalProfileQueryHandler
 {
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
+    private readonly ICacheService _cache;
 
     public GetPersonalProfileQueryHandler(
         IApplicationDbContext context,
-        IUser user)
+        IUser user,
+        ICacheService cache)
     {
         _context = context;
         _user = user;
+        _cache = cache;
     }
 
     public async Task<ProfileDto> Handle(
@@ -29,6 +32,14 @@ internal sealed class GetPersonalProfileQueryHandler
     {
         if (string.IsNullOrWhiteSpace(_user.Id))
             throw new UnauthorizedAccessException("User is not authenticated.");
+
+        var cacheKey = $"profile-personal:v1:user:{_user.Id}";
+        var cachedProfile = await _cache.GetAsync<ProfileDto>(
+            cacheKey,
+            cancellationToken);
+
+        if (cachedProfile is not null)
+            return cachedProfile;
 
         var profile = await _context.Profiles
             .AsNoTracking()
@@ -108,7 +119,7 @@ internal sealed class GetPersonalProfileQueryHandler
                 cv.PublishedAt))
             .ToListAsync(cancellationToken);
 
-        return new ProfileDto(
+        var result = new ProfileDto(
             profile.Id,
             profile.Version,
             profile.CreatedAt,
@@ -116,5 +127,21 @@ internal sealed class GetPersonalProfileQueryHandler
             attributes,
             projects,
             cvs);
+
+        var dependencies = attributes
+            .Select(attribute => $"attribute:{attribute.Attribute.Id}")
+            .Append($"profile:{profile.Id}")
+            .Concat(cvs.Select(cv => $"position:{cv.PositionId}"))
+            .Distinct()
+            .ToArray();
+
+        await _cache.SetAsync(
+            cacheKey,
+            result,
+            TimeSpan.FromMinutes(10),
+            cancellationToken,
+            dependencies);
+
+        return result;
     }
 }

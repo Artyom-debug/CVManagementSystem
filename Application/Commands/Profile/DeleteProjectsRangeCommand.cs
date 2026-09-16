@@ -1,6 +1,7 @@
 using Application.Common.Models;
 using Application.Constants;
 using Application.Interfaces;
+using Domain.Events;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -63,9 +64,6 @@ internal sealed class DeleteProjectsRangeCommandHandler
         if (!canManageProfile)
             return Result.Failure("You do not have permission to modify this profile.");
 
-        if (profile.Version != request.Version)
-            return Result.Failure("The profile was changed by another request. Reload it and try again.");
-
         var ownedProjectIds = profile.Projects
             .Select(project => project.Id)
             .ToHashSet();
@@ -81,6 +79,9 @@ internal sealed class DeleteProjectsRangeCommandHandler
         }
 
         profile.DeleteProjectRange(request.ProjectIds);
+
+        profile.AddDomainEvent(new ProfileChangedEvent(profile.Id));
+        _context.SetOriginalVersion(profile, request.Version);
 
         try
         {

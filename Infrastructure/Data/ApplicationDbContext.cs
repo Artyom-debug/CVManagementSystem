@@ -4,14 +4,20 @@ using Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using MediatR;
 
 namespace Infrastructure.Data;
 
 public sealed class ApplicationDbContext : IdentityDbContext<IdentityUser>, IApplicationDbContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+    private readonly IPublisher _publisher;
+
+    public ApplicationDbContext(
+        DbContextOptions<ApplicationDbContext> options,
+        IPublisher publisher)
         : base(options)
     {
+        _publisher = publisher;
     }
 
     public DbSet<Domain.Entities.Attribute> Attributes => Set<Domain.Entities.Attribute>();
@@ -36,10 +42,36 @@ public sealed class ApplicationDbContext : IdentityDbContext<IdentityUser>, IApp
 
     public DbSet<Domain.Value_Objects.Tag> Tags => Set<Domain.Value_Objects.Tag>();
 
-    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public void SetOriginalVersion(BaseEntity entity, int version)
+    {
+        var versionProperty = Entry(entity).Property(item => item.Version);
+        versionProperty.OriginalValue = version;
+        versionProperty.IsModified = true;
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         UpdateEntityVersions();
-        return base.SaveChangesAsync(cancellationToken);
+
+        var entitiesWithEvents = ChangeTracker
+            .Entries<BaseEntity>()
+            .Where(entry => entry.Entity.DomainEvents.Count > 0)
+            .Select(entry => entry.Entity)
+            .ToList();
+
+        var domainEvents = entitiesWithEvents
+            .SelectMany(entity => entity.DomainEvents)
+            .ToList();
+
+        var result = await base.SaveChangesAsync(cancellationToken);
+
+        foreach (var entity in entitiesWithEvents)
+            entity.ClearDomainEvents();
+
+        foreach (var domainEvent in domainEvents)
+            await _publisher.Publish(domainEvent, cancellationToken);
+
+        return result;
     }
 
     protected override void OnModelCreating(ModelBuilder builder)

@@ -1,5 +1,6 @@
 using Application.Common.Models;
 using Application.Interfaces;
+using Domain.Events;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -37,15 +38,12 @@ internal sealed class DeleteAttributeCommandHandler : IRequestHandler<DeleteAttr
         if (attribute is null)
             return Result.Failure($"Attribute '{request.AttributeId}' was not found.");
 
-        if (attribute.Version != request.Version)
-            return Result.Failure("The attribute was changed by another request. Reload it and try again.");
-
         if (attribute.IsSystem)
             return Result.Failure("Use the system attribute operation to delete a system attribute.");
 
-
+        _context.SetOriginalVersion(attribute, request.Version);
+        attribute.AddDomainEvent(new AttributesChangedEvent(new Guid[] {attribute.Id}));
         _context.Attributes.Remove(attribute);
-
         try
         {
             await _context.SaveChangesAsync(cancellationToken);

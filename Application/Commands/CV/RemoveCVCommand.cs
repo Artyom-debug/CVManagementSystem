@@ -1,6 +1,7 @@
 using Application.Common.Models;
 using Application.Constants;
 using Application.Interfaces;
+using Domain.Events;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -54,13 +55,15 @@ internal sealed class RemoveCVCommandHandler
         if (!canManageCV)
             return Result.Failure("You do not have permission to remove this CV.");
 
-        if (cv.Version != request.Version)
-            return Result.Failure("The CV was changed by another request. Reload it and try again.");
-
         if (cv.MarkedAsDeleted)
             return Result.Failure("The CV has already been deleted.");
 
         cv.MarkCV();
+        cv.AddDomainEvent(new CVChangedEvent(
+            cv.Id,
+            cv.ProfileId,
+            cv.PositionId));
+        _context.SetOriginalVersion(cv, request.Version);
 
         try
         {

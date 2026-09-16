@@ -33,14 +33,24 @@ public sealed class GetAttributesQueryValidator
 internal sealed class GetAttributesQueryHandler : IRequestHandler<GetAttributesQuery, PageResult<AttributeDto>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICacheService _cache;
 
-    public GetAttributesQueryHandler(IApplicationDbContext context)
+    public GetAttributesQueryHandler(IApplicationDbContext context, ICacheService cache)
     {
         _context = context;
+        _cache = cache;
     }
 
     public async Task<PageResult<AttributeDto>> Handle(GetAttributesQuery request, CancellationToken cancellationToken)
     {
+        var category = request.Category?.ToString() ?? "all";
+        var expireTime = request.Page <= 3 ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2);
+        var cacheKey = $"attributes:{category}:page:{request.Page}:size:{request.PageSize}";
+
+        var cachedResult = await _cache.GetAsync<PageResult<AttributeDto>>(cacheKey, cancellationToken);
+        if(cachedResult is not null)
+            return cachedResult;
+
         var query = _context.Attributes.AsNoTracking();
 
         if (request.Category.HasValue)
@@ -65,10 +75,13 @@ internal sealed class GetAttributesQueryHandler : IRequestHandler<GetAttributesQ
         if (hasNextPage)
             items.RemoveAt(items.Count - 1);
 
-        return new PageResult<AttributeDto>(
+        var result = new PageResult<AttributeDto>(
             items,
             request.Page,
             request.PageSize,
             hasNextPage);
+
+        await _cache.SetAsync(cacheKey, result, expireTime,cancellationToken, ["attribute-library"]);
+        return result;
     }
 }

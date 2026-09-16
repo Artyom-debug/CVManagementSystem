@@ -1,6 +1,7 @@
 using Application.Common.Models;
 using Application.Constants;
 using Application.Interfaces;
+using Domain.Events;
 using Domain.Value_Objects;
 using FluentValidation;
 using MediatR;
@@ -84,9 +85,6 @@ internal sealed class UpdateProjectInfoCommandHandler
         if (!canManageProfile)
             return Result.Failure("You do not have permission to modify this profile.");
 
-        if (profile.Version != request.Version)
-            return Result.Failure("The profile was changed by another request. Reload it and try again.");
-
         var project = profile.Projects
             .SingleOrDefault(project => project.Id == request.ProjectId);
 
@@ -118,6 +116,9 @@ internal sealed class UpdateProjectInfoCommandHandler
         profile.SetProjectPeriod(project.Id, period);
         profile.RemoveProjectTagRange(project.Id, currentTags.Except(requestedTags).ToArray());
         profile.AddProjectTagRange(project.Id, tagsToAdd);
+
+        profile.AddDomainEvent(new ProfileChangedEvent(profile.Id));
+        _context.SetOriginalVersion(profile, request.Version);
 
         try
         {

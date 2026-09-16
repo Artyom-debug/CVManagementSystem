@@ -37,6 +37,21 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(
         Policies.ManageCV,
         policy => policy.RequireRole(Roles.Candidate, Roles.Administrator));
+
+    options.AddPolicy(
+        Policies.LikeCV,
+        policy => policy.RequireRole(Roles.Recruiter, Roles.Administrator));
+
+    options.AddPolicy(
+        Policies.ManagePositions,
+        policy => policy.RequireRole(Roles.Recruiter, Roles.Administrator));
+
+    options.AddPolicy(
+        Policies.ParticipateInDiscussions,
+        policy => policy.RequireRole(
+            Roles.Candidate,
+            Roles.Recruiter,
+            Roles.Administrator));
 });
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();

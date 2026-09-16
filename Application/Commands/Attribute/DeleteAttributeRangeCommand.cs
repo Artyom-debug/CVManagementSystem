@@ -1,5 +1,6 @@
 using Application.Common.Models;
 using Application.Interfaces;
+using Domain.Events;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -61,9 +62,9 @@ internal sealed class DeleteAttributeRangeCommandHandler
         if (attributes.Any(attribute => attribute.IsSystem))
             return Result.Failure("System attributes cannot be included in the regular operation.");
 
-        if (attributes.Any(attribute => attribute.Version != requestedVersions[attribute.Id]))
-            return Result.Failure("One or more attributes were changed by another request. Reload them and try again.");
-
+        foreach (var attribute in attributes)
+            _context.SetOriginalVersion(attribute, requestedVersions[attribute.Id]);
+        attributes[0].AddDomainEvent(new AttributesChangedEvent(attributes.Select(a =>  a.Id).ToList()));
         _context.Attributes.RemoveRange(attributes);
 
         try

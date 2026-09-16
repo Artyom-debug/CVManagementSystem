@@ -3,6 +3,7 @@ using Application.Constants;
 using Application.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
+using Domain.Events;
 using Domain.Value_Objects;
 using FluentValidation;
 using MediatR;
@@ -80,6 +81,10 @@ internal sealed class CreateNewCVCommandHandler
             return Result.Failure("A CV for this position already exists.");
 
         var cv = new Domain.Entities.CV(request.ProfileId, request.PositionId);
+        cv.AddDomainEvent(new CVChangedEvent(
+            cv.Id,
+            cv.ProfileId,
+            cv.PositionId));
         _context.CVs.Add(cv);
 
         try

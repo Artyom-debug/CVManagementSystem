@@ -3,6 +3,7 @@ using Application.Constants;
 using Application.Dtos;
 using Application.Interfaces;
 using Domain.Enums;
+using Domain.Events;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -82,6 +83,7 @@ internal sealed class CreateSystemAttributeCommandHandler : IRequestHandler<Crea
 
         attribute.MarkAsSystemAttribute();
         _context.Attributes.Add(attribute);
+        attribute.AddDomainEvent(new AttributeAddedEvent());
         await _context.SaveChangesAsync(cancellationToken);
 
         return Result.Success(attribute.Version);

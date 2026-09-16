@@ -14,4 +14,8 @@ public static class Policies
     public const string ViewPublicCandidateProfile = nameof(ViewPublicCandidateProfile);
 
     public const string ManageCV = nameof(ManageCV);
+    public const string LikeCV = nameof(LikeCV);
+
+    public const string ManagePositions = nameof(ManagePositions);
+    public const string ParticipateInDiscussions = nameof(ParticipateInDiscussions);
 }
