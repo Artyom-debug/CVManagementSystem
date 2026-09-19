@@ -10,15 +10,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Commands.Attribute;
 
-public sealed record CreateSystemAttributeCommand(
-    string Name,
-    string? Description,
-    AttributeType Type,
-    Category Category,
-    IReadOnlyCollection<string>? Options) : IRequest<Result>;
+public sealed record CreateSystemAttributeCommand(string Name, string? Description, AttributeType Type, Category Category, IReadOnlyCollection<string>? Options) : IRequest<Result>;
 
-public sealed class CreateSystemAttributeCommandValidator
-    : AbstractValidator<CreateSystemAttributeCommand>
+public sealed class CreateSystemAttributeCommandValidator : AbstractValidator<CreateSystemAttributeCommand>
 {
     public CreateSystemAttributeCommandValidator()
     {
@@ -71,12 +65,7 @@ internal sealed class CreateSystemAttributeCommandHandler : IRequestHandler<Crea
         if (nameAlreadyExists)
             return Result.Failure($"Attribute '{request.Name.Trim()}' already exists.");
 
-        var attribute = new Domain.Entities.Attribute(
-            request.Name,
-            request.Description,
-            request.Type,
-            request.Category,
-            isSystem: false);
+        var attribute = new Domain.Entities.Attribute(request.Name, request.Description, request.Type, request.Category, isSystem: false);
 
         if (request.Type == AttributeType.Dropdown)
             attribute.AddOptionsRange(request.Options ?? []);

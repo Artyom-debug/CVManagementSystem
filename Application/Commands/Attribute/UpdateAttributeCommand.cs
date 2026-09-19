@@ -10,16 +10,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Commands.Attribute;
 
-public sealed record UpdateAttributeCommand(
-    Guid AttributeId,
-    int Version,
-    string Name,
-    string? Description,
-    Category Category,
-    IReadOnlyCollection<AttributeOptionInput>? Options) : IRequest<Result>;
+public sealed record UpdateAttributeCommand(Guid AttributeId, int Version, string Name, string? Description, Category Category, IReadOnlyCollection<AttributeOptionDto>? Options, bool IsMarked = false) : IRequest<Result>;
 
-public sealed class UpdateAttributeCommandValidator
-    : AbstractValidator<UpdateAttributeCommand>
+public sealed class UpdateAttributeCommandValidator : AbstractValidator<UpdateAttributeCommand>
 {
     public UpdateAttributeCommandValidator()
     {
@@ -46,14 +39,14 @@ public sealed class UpdateAttributeCommandValidator
             .SetValidator(new AttributeOptionInputValidator());
     }
 
-    private static bool HaveUniqueIds(IReadOnlyCollection<AttributeOptionInput>? options) =>
+    private static bool HaveUniqueIds(IReadOnlyCollection<AttributeOptionDto>? options) =>
         options is null || options
             .Where(option => option.Id.HasValue)
             .Select(option => option.Id!.Value)
             .Distinct()
             .Count() == options.Count(option => option.Id.HasValue);
 
-    private static bool HaveUniqueValues(IReadOnlyCollection<AttributeOptionInput>? options) =>
+    private static bool HaveUniqueValues(IReadOnlyCollection<AttributeOptionDto>? options) =>
         options is null || options
             .Where(option => !string.IsNullOrWhiteSpace(option.Value))
             .Select(option => option.Value.Trim())
@@ -61,7 +54,7 @@ public sealed class UpdateAttributeCommandValidator
             .Count() == options.Count(option => !string.IsNullOrWhiteSpace(option.Value));
 }
 
-internal sealed class AttributeOptionInputValidator : AbstractValidator<AttributeOptionInput>
+internal sealed class AttributeOptionInputValidator : AbstractValidator<AttributeOptionDto>
 {
     public AttributeOptionInputValidator()
     {
@@ -75,19 +68,18 @@ internal sealed class AttributeOptionInputValidator : AbstractValidator<Attribut
     }
 }
 
-internal sealed class UpdateAttributeCommandHandler
-    : IRequestHandler<UpdateAttributeCommand, Result>
+internal sealed class UpdateAttributeCommandHandler : IRequestHandler<UpdateAttributeCommand, Result>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IUser _user;
 
-    public UpdateAttributeCommandHandler(IApplicationDbContext context)
+    public UpdateAttributeCommandHandler(IApplicationDbContext context, IUser user)
     {
         _context = context;
+        _user = user;
     }
 
-    public async Task<Result> Handle(
-        UpdateAttributeCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(UpdateAttributeCommand request, CancellationToken cancellationToken)
     {
         var attribute = await _context.Attributes
             .Include(item => item.Options)
@@ -110,12 +102,10 @@ internal sealed class UpdateAttributeCommandHandler
         if (attribute.Name != normalizedName)
         {
             var nameAlreadyExists = await _context.Attributes
-                .AnyAsync(
-                    item => item.Id != attribute.Id && item.Name == normalizedName,
-                    cancellationToken);
+                .AnyAsync(item => item.Id != attribute.Id && item.Name == normalizedName, cancellationToken);
 
             if (nameAlreadyExists)
-                return Result.Failure($"Attribute '{request.Name.Trim()}' already exists.");
+                return Result.Failure($"Attribute '{request.Name}' already exists.");
         }
 
         var oldName = attribute.Name;
@@ -133,8 +123,11 @@ internal sealed class UpdateAttributeCommandHandler
         var hasChanged = oldName != attribute.Name ||
             oldDescription != attribute.Description ||
             oldCategory != attribute.Category ||
-            OptionsChanged(oldOptions, attribute.Options);
+            OptionsChanged(oldOptions, attribute.Options) ||
+            request.IsMarked;
 
+        if (request.IsMarked && _user.Roles?.Contains(Roles.Administrator) == true)
+            attribute.MarkAsSystemAttribute();
         if (!hasChanged)
             return Result.Success(attribute.Version);
 
@@ -153,9 +146,7 @@ internal sealed class UpdateAttributeCommandHandler
         return Result.Success(attribute.Version);
     }
 
-    private static string? ValidateOptionsForType(
-        AttributeType type,
-        IReadOnlyCollection<AttributeOptionInput> options)
+    private static string? ValidateOptionsForType(AttributeType type, IReadOnlyCollection<AttributeOptionDto> options)
     {
         if (type == AttributeType.Dropdown && options.Count == 0)
             return "A dropdown attribute must contain at least one option.";
@@ -166,9 +157,7 @@ internal sealed class UpdateAttributeCommandHandler
         return null;
     }
 
-    private static string? ValidateRequestedOptionIds(
-        Domain.Entities.Attribute attribute,
-        IReadOnlyCollection<AttributeOptionInput> requestedOptions)
+    private static string? ValidateRequestedOptionIds(Domain.Entities.Attribute attribute, IReadOnlyCollection<AttributeOptionDto> requestedOptions)
     {
         var existingIds = attribute.Options.Select(option => option.Id).ToHashSet();
         var unknownIds = requestedOptions
@@ -181,9 +170,7 @@ internal sealed class UpdateAttributeCommandHandler
             : $"Options [{string.Join(", ", unknownIds)}] do not belong to this attribute.";
     }
 
-    private static void SynchronizeDropdownOptions(
-        Domain.Entities.Attribute attribute,
-        IReadOnlyCollection<AttributeOptionInput> requestedOptions)
+    private static void SynchronizeDropdownOptions(Domain.Entities.Attribute attribute, IReadOnlyCollection<AttributeOptionDto> requestedOptions)
     {
         var existingOptions = attribute.Options.ToDictionary(option => option.Id);
         var requestedExistingIds = requestedOptions
@@ -208,14 +195,11 @@ internal sealed class UpdateAttributeCommandHandler
         attribute.AddOptionsRange(optionsToAdd);
     }
 
-    private static bool OptionsChanged(
-        IReadOnlyDictionary<Guid, string> oldOptions,
-        IReadOnlyCollection<Domain.Entities.AttributeOptions> currentOptions)
+    private static bool OptionsChanged(IReadOnlyDictionary<Guid, string> oldOptions, IReadOnlyCollection<Domain.Entities.AttributeOptions> currentOptions)
     {
         if (oldOptions.Count != currentOptions.Count)
             return true;
 
-        return currentOptions.Any(option =>
-            !oldOptions.TryGetValue(option.Id, out var oldValue) || oldValue != option.Option);
+        return currentOptions.Any(option => !oldOptions.TryGetValue(option.Id, out var oldValue) || oldValue != option.Option);
     }
 }

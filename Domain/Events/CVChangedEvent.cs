@@ -10,10 +10,7 @@ public sealed class CVChangedEvent : BaseEvent
 
     public Guid PositionId { get; }
 
-    public CVChangedEvent(
-        Guid cvId,
-        Guid profileId,
-        Guid positionId)
+    public CVChangedEvent(Guid cvId, Guid profileId, Guid positionId)
     {
         CVId = cvId;
         ProfileId = profileId;

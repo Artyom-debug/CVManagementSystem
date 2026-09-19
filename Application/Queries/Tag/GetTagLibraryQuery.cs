@@ -6,8 +6,7 @@ namespace Application.Queries.Tag;
 
 public sealed record GetTagLibraryQuery : IRequest<IReadOnlyList<string>>;
 
-internal sealed class GetTagLibraryQueryHandler
-    : IRequestHandler<GetTagLibraryQuery, IReadOnlyList<string>>
+internal sealed class GetTagLibraryQueryHandler : IRequestHandler<GetTagLibraryQuery, IReadOnlyList<string>>
 {
     private readonly IApplicationDbContext _context;
 
@@ -16,9 +15,7 @@ internal sealed class GetTagLibraryQueryHandler
         _context = context;
     }
 
-    public async Task<IReadOnlyList<string>> Handle(
-        GetTagLibraryQuery request,
-        CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<string>> Handle(GetTagLibraryQuery request, CancellationToken cancellationToken)
     {
         return await _context.Tags
             .AsNoTracking()

@@ -4,8 +4,7 @@ using MediatR;
 
 namespace Application.Behaviors;
 
-internal sealed class ValidationBehavior<TRequest, TResponse>
-    : IPipelineBehavior<TRequest, TResponse>
+internal sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
     private readonly IEnumerable<IValidator<TRequest>> _validators;
@@ -15,10 +14,7 @@ internal sealed class ValidationBehavior<TRequest, TResponse>
         _validators = validators;
     }
 
-    public Task<TResponse> Handle(
-        TRequest request,
-        RequestHandlerDelegate<TResponse> next,
-        CancellationToken cancellationToken)
+    public Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
         if (!_validators.Any())
             return next(cancellationToken);
@@ -26,14 +22,10 @@ internal sealed class ValidationBehavior<TRequest, TResponse>
         return ValidateAndContinueAsync(request, next, cancellationToken);
     }
 
-    private async Task<TResponse> ValidateAndContinueAsync(
-        TRequest request,
-        RequestHandlerDelegate<TResponse> next,
-        CancellationToken cancellationToken)
+    private async Task<TResponse> ValidateAndContinueAsync(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
         var context = new ValidationContext<TRequest>(request);
-        var validationResults = await Task.WhenAll(
-            _validators.Select(validator => validator.ValidateAsync(context, cancellationToken)));
+        var validationResults = await Task.WhenAll(_validators.Select(validator => validator.ValidateAsync(context, cancellationToken)));
 
         var failures = validationResults
             .SelectMany(result => result.Errors)
@@ -42,9 +34,7 @@ internal sealed class ValidationBehavior<TRequest, TResponse>
 
         if (failures.Length > 0)
         {
-            var message = string.Join(
-                "; ",
-                failures.Select(failure => $"{failure.PropertyName}: {failure.ErrorMessage}"));
+            var message = string.Join("; ", failures.Select(failure => $"{failure.PropertyName}: {failure.ErrorMessage}"));
 
             if (typeof(TResponse) == typeof(Result))
                 return (TResponse)(object)Result.Failure(message);

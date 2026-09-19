@@ -33,20 +33,14 @@ public sealed class AccessRule : ValueObject
         Operator = op;
     }
 
-    public static AccessRule ForString(
-        Guid attributeId,
-        AttributeType attributeType,
-        Operator op,
-        string value)
+    public static AccessRule ForString(Guid attributeId, AttributeType attributeType, Operator op, string value)
     {
         if (attributeType is not (
             AttributeType.String or
             AttributeType.Text or
             AttributeType.Image))
         {
-            throw new ArgumentException(
-                "String rule can be created only for string, text or image attributes",
-                nameof(attributeType));
+            throw new ArgumentException("String rule can be created only for string, text or image attributes", nameof(attributeType));
         }
         if (string.IsNullOrWhiteSpace(value))
             throw new ArgumentException("Rule value cannot be empty", nameof(value));
@@ -57,10 +51,7 @@ public sealed class AccessRule : ValueObject
         };
     }
 
-    public static AccessRule ForNumeric(
-        Guid attributeId,
-        Operator op,
-        double value)
+    public static AccessRule ForNumeric(Guid attributeId, Operator op, double value)
     {
         return new AccessRule(attributeId, AttributeType.Numeric, op)
         {
@@ -68,10 +59,7 @@ public sealed class AccessRule : ValueObject
         };
     }
 
-    public static AccessRule ForDate(
-        Guid attributeId,
-        Operator op,
-        DateOnly value)
+    public static AccessRule ForDate(Guid attributeId, Operator op, DateOnly value)
     {
         return new AccessRule(attributeId, AttributeType.Date, op)
         {
@@ -79,10 +67,7 @@ public sealed class AccessRule : ValueObject
         };
     }
 
-    public static AccessRule ForPeriod(
-        Guid attributeId,
-        Operator op,
-        Period value)
+    public static AccessRule ForPeriod(Guid attributeId, Operator op, Period value)
     {
         ArgumentNullException.ThrowIfNull(value);
 
@@ -92,10 +77,7 @@ public sealed class AccessRule : ValueObject
         };
     }
 
-    public static AccessRule ForBoolean(
-        Guid attributeId,
-        Operator op,
-        bool value)
+    public static AccessRule ForBoolean(Guid attributeId, Operator op, bool value)
     {
         return new AccessRule(attributeId, AttributeType.Checkbox, op)
         {
@@ -103,10 +85,7 @@ public sealed class AccessRule : ValueObject
         };
     }
 
-    public static AccessRule ForDropdown(
-        Guid attributeId,
-        Operator op,
-        Guid optionId)
+    public static AccessRule ForDropdown(Guid attributeId, Operator op, Guid optionId)
     {
         if (optionId == Guid.Empty)
             throw new ArgumentException("Dropdown option id cannot be empty", nameof(optionId));
@@ -132,9 +111,7 @@ public sealed class AccessRule : ValueObject
 
         if (!supportsOrdering && !isEqualityOperator)
         {
-            throw new ArgumentException(
-                $"Operator {op} is not supported for attribute type {attributeType}",
-                nameof(op));
+            throw new ArgumentException($"Operator {op} is not supported for attribute type {attributeType}", nameof(op));
         }
     }
 }

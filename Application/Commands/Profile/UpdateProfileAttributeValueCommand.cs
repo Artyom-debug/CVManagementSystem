@@ -10,13 +10,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Commands.Profile;
 
-public sealed record UpdateProfileAttributeValueCommand(
-    Guid ProfileId,
-    AttributeValueDto Value,
-    int Version) : IRequest<Result>;
+public sealed record UpdateProfileAttributeValueCommand(Guid ProfileId, AttributeValueDto Value, int Version) : IRequest<Result>;
 
-public sealed class UpdateProfileAttributeValueCommandValidator
-    : AbstractValidator<UpdateProfileAttributeValueCommand>
+public sealed class UpdateProfileAttributeValueCommandValidator : AbstractValidator<UpdateProfileAttributeValueCommand>
 {
     public UpdateProfileAttributeValueCommandValidator()
     {
@@ -30,29 +26,22 @@ public sealed class UpdateProfileAttributeValueCommandValidator
     }
 }
 
-internal sealed class UpdateProfileAttributeValueCommandHandler
-    : IRequestHandler<UpdateProfileAttributeValueCommand, Result>
+internal sealed class UpdateProfileAttributeValueCommandHandler : IRequestHandler<UpdateProfileAttributeValueCommand, Result>
 {
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
 
-    public UpdateProfileAttributeValueCommandHandler(
-        IApplicationDbContext context,
-        IUser user)
+    public UpdateProfileAttributeValueCommandHandler(IApplicationDbContext context, IUser user)
     {
         _context = context;
         _user = user;
     }
 
-    public async Task<Result> Handle(
-        UpdateProfileAttributeValueCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(UpdateProfileAttributeValueCommand request, CancellationToken cancellationToken)
     {
         var profile = await _context.Profiles
             .Include(profile => profile.AttributeValues)
-            .SingleOrDefaultAsync(
-                profile => profile.Id == request.ProfileId,
-                cancellationToken);
+            .SingleOrDefaultAsync(profile => profile.Id == request.ProfileId, cancellationToken);
 
         if (profile is null)
             return Result.Failure("Profile was not found.");
@@ -72,9 +61,7 @@ internal sealed class UpdateProfileAttributeValueCommandHandler
         var attribute = await _context.Attributes
             .AsNoTracking()
             .Include(attribute => attribute.Options)
-            .SingleOrDefaultAsync(
-                attribute => attribute.Id == request.Value.AttributeId,
-                cancellationToken);
+            .SingleOrDefaultAsync(attribute => attribute.Id == request.Value.AttributeId, cancellationToken);
 
         if (attribute is null)
             return Result.Failure($"Attribute '{request.Value.AttributeId}' was not found.");
@@ -91,15 +78,10 @@ internal sealed class UpdateProfileAttributeValueCommandHandler
             value is Guid optionId &&
             attribute.Options.All(option => option.Id != optionId))
         {
-            return Result.Failure(
-                $"Selected option does not belong to attribute '{attribute.Name}'.");
+            return Result.Failure($"Selected option does not belong to attribute '{attribute.Name}'.");
         }
 
-        profile.SetAttributeValue(
-            attribute.Id,
-            value,
-            attribute.Type,
-            currentValue.Order);
+        profile.SetAttributeValue(attribute.Id, value, attribute.Type, currentValue.Order);
 
         profile.AddDomainEvent(new ProfileChangedEvent(profile.Id));
         _context.SetOriginalVersion(profile, request.Version);

@@ -10,9 +10,7 @@ public sealed class PositionAttributeConfiguration : IEntityTypeConfiguration<Po
     {
         builder.ToTable("PositionAttributes", table =>
         {
-            table.HasCheckConstraint(
-                "CK_PositionAttributes_DisplayOrder_NonNegative",
-                "\"DisplayOrder\" >= 0");
+            table.HasCheckConstraint("CK_PositionAttributes_DisplayOrder_NonNegative", "\"DisplayOrder\" >= 0");
         });
 
         builder.ConfigureBaseEntity();

@@ -8,8 +8,7 @@ namespace Application.Commands.Tag;
 
 public sealed record AddNewTagCommand(string Name) : IRequest<Result>;
 
-public sealed class AddNewTagCommandValidator
-    : AbstractValidator<AddNewTagCommand>
+public sealed class AddNewTagCommandValidator : AbstractValidator<AddNewTagCommand>
 {
     public AddNewTagCommandValidator()
     {
@@ -19,8 +18,7 @@ public sealed class AddNewTagCommandValidator
     }
 }
 
-internal sealed class AddNewTagCommandHandler
-    : IRequestHandler<AddNewTagCommand, Result>
+internal sealed class AddNewTagCommandHandler : IRequestHandler<AddNewTagCommand, Result>
 {
     private readonly IApplicationDbContext _context;
 
@@ -29,9 +27,7 @@ internal sealed class AddNewTagCommandHandler
         _context = context;
     }
 
-    public async Task<Result> Handle(
-        AddNewTagCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(AddNewTagCommand request, CancellationToken cancellationToken)
     {
         var normalizedName = request.Name.Trim().ToUpperInvariant();
 

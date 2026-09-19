@@ -3,15 +3,7 @@ using Domain.Value_Objects;
 
 namespace Application.Dtos;
 
-public record AttributeValueDto(
-        Guid AttributeId,
-        int Order,
-        string? StringValue,
-        double? NumericValue,
-        DateOnly? DateValue,
-        Period? PeriodValue,
-        bool? CheckboxValue,
-        Guid? DropdownOptionId)
+public record AttributeValueDto(Guid AttributeId, int Order, string? StringValue, double? NumericValue, DateOnly? DateValue, Period? PeriodValue, bool? CheckboxValue, Guid? DropdownOptionId)
 {
     public object? GetValue(AttributeType type) =>
         type switch

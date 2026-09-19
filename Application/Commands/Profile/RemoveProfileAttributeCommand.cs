@@ -8,13 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Commands.Profile;
 
-public sealed record RemoveProfileAttributeCommand(
-    Guid ProfileId,
-    Guid AttributeId,
-    int Version) : IRequest<Result>;
+public sealed record RemoveProfileAttributeCommand(Guid ProfileId, Guid AttributeId, int Version) : IRequest<Result>;
 
-public sealed class RemoveProfileAttributeCommandValidator
-    : AbstractValidator<RemoveProfileAttributeCommand>
+public sealed class RemoveProfileAttributeCommandValidator : AbstractValidator<RemoveProfileAttributeCommand>
 {
     public RemoveProfileAttributeCommandValidator()
     {
@@ -24,29 +20,22 @@ public sealed class RemoveProfileAttributeCommandValidator
     }
 }
 
-internal sealed class RemoveProfileAttributeCommandHandler
-    : IRequestHandler<RemoveProfileAttributeCommand, Result>
+internal sealed class RemoveProfileAttributeCommandHandler : IRequestHandler<RemoveProfileAttributeCommand, Result>
 {
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
 
-    public RemoveProfileAttributeCommandHandler(
-        IApplicationDbContext context,
-        IUser user)
+    public RemoveProfileAttributeCommandHandler(IApplicationDbContext context, IUser user)
     {
         _context = context;
         _user = user;
     }
 
-    public async Task<Result> Handle(
-        RemoveProfileAttributeCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(RemoveProfileAttributeCommand request, CancellationToken cancellationToken)
     {
         var profile = await _context.Profiles
             .Include(profile => profile.AttributeValues)
-            .SingleOrDefaultAsync(
-                profile => profile.Id == request.ProfileId,
-                cancellationToken);
+            .SingleOrDefaultAsync(profile => profile.Id == request.ProfileId, cancellationToken);
 
         if (profile is null)
             return Result.Failure("Profile was not found.");
@@ -59,9 +48,7 @@ internal sealed class RemoveProfileAttributeCommandHandler
 
         var attribute = await _context.Attributes
             .AsNoTracking()
-            .SingleOrDefaultAsync(
-                attribute => attribute.Id == request.AttributeId,
-                cancellationToken);
+            .SingleOrDefaultAsync(attribute => attribute.Id == request.AttributeId, cancellationToken);
 
         if (attribute is null)
             return Result.Failure($"Attribute '{request.AttributeId}' was not found.");

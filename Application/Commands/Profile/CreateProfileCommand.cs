@@ -9,8 +9,7 @@ namespace Application.Commands;
 
 public sealed record CreateProfileCommand(string UserId) : IRequest<Result>;
 
-public sealed class CreateProfileCommandValidator
-    : AbstractValidator<CreateProfileCommand>
+public sealed class CreateProfileCommandValidator : AbstractValidator<CreateProfileCommand>
 {
     public CreateProfileCommandValidator()
     {
@@ -20,8 +19,7 @@ public sealed class CreateProfileCommandValidator
     }
 }
 
-internal sealed class CreateProfileCommandHandler
-    : IRequestHandler<CreateProfileCommand, Result>
+internal sealed class CreateProfileCommandHandler : IRequestHandler<CreateProfileCommand, Result>
 {
     private readonly IApplicationDbContext _context;
 
@@ -30,14 +28,10 @@ internal sealed class CreateProfileCommandHandler
         _context = context;
     }
 
-    public async Task<Result> Handle(
-        CreateProfileCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(CreateProfileCommand request, CancellationToken cancellationToken)
     {
         var profileExists = await _context.Profiles
-            .AnyAsync(
-                profile => profile.UserId == request.UserId,
-                cancellationToken);
+            .AnyAsync(profile => profile.UserId == request.UserId, cancellationToken);
 
         if (profileExists)
             return Result.Failure("A profile for this user already exists.");

@@ -52,11 +52,7 @@ public sealed class Profile : BaseEntity
         MarkUpdated();
     }
 
-    public void AddNewProject(
-        string name,
-        string? description,
-        Period period,
-        IReadOnlyCollection<Tag> tags)
+    public void AddNewProject(string name, string? description, Period period, IReadOnlyCollection<Tag> tags)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Project name cannot be empty", nameof(name));
@@ -76,8 +72,7 @@ public sealed class Profile : BaseEntity
         if (attribute.IsSystem)
             throw new InvalidOperationException("System attribute cannot be removed from a profile");
 
-        var attributeValue = _attributeValues.FirstOrDefault(
-            value => value.AttributeId == attribute.Id);
+        var attributeValue = _attributeValues.FirstOrDefault(value => value.AttributeId == attribute.Id);
         if (attributeValue == null)
             return;
 
@@ -124,9 +119,7 @@ public sealed class Profile : BaseEntity
     //        MarkUpdated();
     //}
 
-    public void AddProjectTagRange(
-        Guid projectId,
-        IReadOnlyCollection<Tag> tags)
+    public void AddProjectTagRange(Guid projectId, IReadOnlyCollection<Tag> tags)
     {
         if (FindProject(projectId).AddTagRange(tags))
             MarkUpdated();

@@ -8,13 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Queries.Attribute;
 
-public sealed record GetAttributesQuery(
-    int Page = 1,
-    int PageSize = 30,
-    Category? Category = null) : IRequest<PageResult<AttributeDto>>;
+public sealed record GetAttributesQuery(int Page = 1, int PageSize = 30, Category? Category = null) : IRequest<PageResult<AttributeDto>>;
 
-public sealed class GetAttributesQueryValidator
-    : AbstractValidator<GetAttributesQuery>
+public sealed class GetAttributesQueryValidator : AbstractValidator<GetAttributesQuery>
 {
     public GetAttributesQueryValidator()
     {
@@ -59,27 +55,16 @@ internal sealed class GetAttributesQueryHandler : IRequestHandler<GetAttributesQ
         var skip = (request.Page - 1) * request.PageSize;
         var items = await query
             .OrderBy(attribute => attribute.Name)
-            .ThenBy(attribute => attribute.Id)
             .Skip(skip)
             .Take(request.PageSize + 1)
-            .Select(attribute => new AttributeDto(
-                attribute.Id,
-                attribute.Version,
-                attribute.Name,
-                attribute.Type,
-                attribute.Category,
-                attribute.IsSystem))
+            .Select(attribute => new AttributeDto(attribute.Id, attribute.Version, attribute.Name, attribute.Type, attribute.Category, attribute.IsSystem))
             .ToListAsync(cancellationToken);
 
         var hasNextPage = items.Count > request.PageSize;
         if (hasNextPage)
             items.RemoveAt(items.Count - 1);
 
-        var result = new PageResult<AttributeDto>(
-            items,
-            request.Page,
-            request.PageSize,
-            hasNextPage);
+        var result = new PageResult<AttributeDto>(items, request.Page, request.PageSize, hasNextPage);
 
         await _cache.SetAsync(cacheKey, result, expireTime,cancellationToken, ["attribute-library"]);
         return result;

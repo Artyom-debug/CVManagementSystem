@@ -8,10 +8,4 @@ using Domain.Enums;
 
 namespace Application.Dtos;
 
-public sealed record AttributeDto(
-    Guid Id,
-    int Version,
-    string Name,
-    AttributeType Type,
-    Category Category,
-    bool IsSystem);
+public sealed record AttributeDto(Guid Id, int Version, string Name, AttributeType Type, Category Category, bool IsSystem);

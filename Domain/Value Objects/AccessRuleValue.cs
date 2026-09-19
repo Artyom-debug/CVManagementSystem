@@ -18,14 +18,7 @@ public sealed class AccessRuleValue : ValueObject
 
     public Guid? DropdownOptionId { get; }
 
-    private AccessRuleValue(
-        string? stringValue = null,
-        double? numericValue = null,
-        DateOnly? dateValue = null,
-        DateOnly? periodStart = null,
-        DateOnly? periodEnd = null,
-        bool? booleanValue = null,
-        Guid? dropdownOptionId = null)
+    private AccessRuleValue(string? stringValue = null, double? numericValue = null, DateOnly? dateValue = null, DateOnly? periodStart = null, DateOnly? periodEnd = null, bool? booleanValue = null, Guid? dropdownOptionId = null)
     {
         StringValue = stringValue;
         NumericValue = numericValue;
@@ -54,9 +47,7 @@ public sealed class AccessRuleValue : ValueObject
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        return new AccessRuleValue(
-            periodStart: value.Start,
-            periodEnd: value.End);
+        return new AccessRuleValue(periodStart: value.Start, periodEnd: value.End);
     }
 
     public static AccessRuleValue FromBoolean(bool value) =>

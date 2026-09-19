@@ -1,4 +1,6 @@
+using Application.Common.Exceptions;
 using Application.Common.Models;
+using Application.Constants;
 using Application.Interfaces;
 using Domain.Events;
 using FluentValidation;
@@ -9,18 +11,15 @@ namespace Application.Commands.Attribute;
 
 public sealed record AttributeVersionInput(Guid AttributeId, int Version);
 
-public sealed record DeleteAttributeRangeCommand(
-    IReadOnlyCollection<AttributeVersionInput> Attributes) : IRequest<Result>;
+public sealed record DeleteAttributeRangeCommand(IReadOnlyCollection<AttributeVersionInput> Attributes) : IRequest<Result>;
 
-public sealed class DeleteAttributeRangeCommandValidator
-    : AbstractValidator<DeleteAttributeRangeCommand>
+public sealed class DeleteAttributeRangeCommandValidator : AbstractValidator<DeleteAttributeRangeCommand>
 {
     public DeleteAttributeRangeCommandValidator()
     {
         RuleFor(command => command.Attributes)
             .NotEmpty()
-            .Must(attributes => attributes is null ||
-                attributes.Select(attribute => attribute.AttributeId).Distinct().Count() == attributes.Count)
+            .Must(attributes => attributes is null || attributes.Select(attribute => attribute.AttributeId).Distinct().Count() == attributes.Count)
             .WithMessage("Attribute ids must be unique.");
 
         RuleForEach(command => command.Attributes).ChildRules(attribute =>
@@ -31,19 +30,19 @@ public sealed class DeleteAttributeRangeCommandValidator
     }
 }
 
-internal sealed class DeleteAttributeRangeCommandHandler
-    : IRequestHandler<DeleteAttributeRangeCommand, Result>
+internal sealed class DeleteAttributeRangeCommandHandler : IRequestHandler<DeleteAttributeRangeCommand, Result>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IUser _user;
 
-    public DeleteAttributeRangeCommandHandler(IApplicationDbContext context)
+    public DeleteAttributeRangeCommandHandler(IApplicationDbContext context, IUser user)
     {
         _context = context;
+        _user = user;
+
     }
 
-    public async Task<Result> Handle(
-        DeleteAttributeRangeCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(DeleteAttributeRangeCommand request, CancellationToken cancellationToken)
     {
         var requestedVersions = request.Attributes
             .ToDictionary(attribute => attribute.AttributeId, attribute => attribute.Version);
@@ -59,8 +58,8 @@ internal sealed class DeleteAttributeRangeCommandHandler
             return Result.Failure($"Attributes [{string.Join(", ", missingIds)}] were not found.");
         }
 
-        if (attributes.Any(attribute => attribute.IsSystem))
-            return Result.Failure("System attributes cannot be included in the regular operation.");
+        if (attributes.Any(attribute => attribute.IsSystem) && _user.Roles?.Contains(Roles.Administrator) != true)
+            throw new ForbiddenAccessException("Only an administrator can delete system attributes.");
 
         foreach (var attribute in attributes)
             _context.SetOriginalVersion(attribute, requestedVersions[attribute.Id]);

@@ -11,12 +11,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Queries.Position;
 
-public sealed record GetAvailablePositionsQuery(
-    int Page = 1,
-    int PageSize = 30) : IRequest<PageResult<PositionDto>>;
+public sealed record GetAvailablePositionsQuery(int Page = 1, int PageSize = 30) : IRequest<PageResult<PositionDto>>;
 
-public sealed class GetAvailablePositionsQueryValidator
-    : AbstractValidator<GetAvailablePositionsQuery>
+public sealed class GetAvailablePositionsQueryValidator : AbstractValidator<GetAvailablePositionsQuery>
 {
     public GetAvailablePositionsQueryValidator()
     {
@@ -29,34 +26,26 @@ public sealed class GetAvailablePositionsQueryValidator
     }
 }
 
-internal sealed class GetAvailablePositionsQueryHandler
-    : IRequestHandler<GetAvailablePositionsQuery, PageResult<PositionDto>>
+internal sealed class GetAvailablePositionsQueryHandler : IRequestHandler<GetAvailablePositionsQuery, PageResult<PositionDto>>
 {
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
     private readonly ICacheService _cache;
 
-    public GetAvailablePositionsQueryHandler(
-        IApplicationDbContext context,
-        IUser user,
-        ICacheService cache)
+    public GetAvailablePositionsQueryHandler(IApplicationDbContext context, IUser user, ICacheService cache)
     {
         _context = context;
         _user = user;
         _cache = cache;
     }
 
-    public async Task<PageResult<PositionDto>> Handle(
-        GetAvailablePositionsQuery request,
-        CancellationToken cancellationToken)
+    public async Task<PageResult<PositionDto>> Handle(GetAvailablePositionsQuery request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_user.Id))
             throw new UnauthorizedAccessException("User is not authenticated.");
 
         var cacheKey = $"positions:available:v1:user:{_user.Id}:page:{request.Page}:size:{request.PageSize}";
-        var cachedResult = await _cache.GetAsync<PageResult<PositionDto>>(
-            cacheKey,
-            cancellationToken);
+        var cachedResult = await _cache.GetAsync<PageResult<PositionDto>>(cacheKey, cancellationToken);
 
         if (cachedResult is not null)
             return cachedResult;
@@ -64,9 +53,7 @@ internal sealed class GetAvailablePositionsQueryHandler
         var profile = await _context.Profiles
             .AsNoTracking()
             .Include(profile => profile.AttributeValues)
-            .SingleOrDefaultAsync(
-                profile => profile.UserId == _user.Id,
-                cancellationToken)
+            .SingleOrDefaultAsync(profile => profile.UserId == _user.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Profile), _user.Id);
 
         var profileValues = profile.AttributeValues
@@ -121,46 +108,23 @@ internal sealed class GetAvailablePositionsQueryHandler
             page.RemoveAt(page.Count - 1);
 
         var items = page
-            .Select(position => new PositionDto(
-                position.Id,
-                position.Version,
-                position.Name,
-                position.Description,
-                position.MaxProjectCount,
-                position.IsPublic,
-                position.Tags
-                    .OrderBy(tag => tag.Name)
-                    .Select(tag => tag.Name)
-                    .ToList()))
+            .Select(position => new PositionDto(position.Id, position.Version, position.Name, position.Description, position.MaxProjectCount, position.IsPublic, position.Tags.OrderBy(tag => tag.Name).Select(tag => tag.Name).ToList()))
             .ToList();
 
-        var result = new PageResult<PositionDto>(
-            items,
-            request.Page,
-            request.PageSize,
-            hasNextPage);
+        var result = new PageResult<PositionDto>(items, request.Page, request.PageSize, hasNextPage);
 
-        await _cache.SetAsync(
-            cacheKey,
-            result,
-            request.Page <= 3 ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2),
-            cancellationToken,
-            ["position-library", $"profile:{profile.Id}"]);
+        await _cache.SetAsync(cacheKey, result, request.Page <= 3 ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2), cancellationToken, ["position-library", $"profile:{profile.Id}"]);
 
         return result;
     }
 
-    private static bool CanAccess(
-        Domain.Entities.Position position,
-        IReadOnlyDictionary<Guid, ProfileAttributeValue> profileValues)
+    private static bool CanAccess(Domain.Entities.Position position, IReadOnlyDictionary<Guid, ProfileAttributeValue> profileValues)
     {
         if (position.IsPublic)
             return true;
 
         return position.AccessRules.Count > 0 &&
-               position.AccessRules.All(rule =>
-                   profileValues.TryGetValue(rule.AttributeId, out var value) &&
-                   Matches(value, rule));
+               position.AccessRules.All(rule => profileValues.TryGetValue(rule.AttributeId, out var value) && Matches(value, rule));
     }
 
     private static bool Matches(ProfileAttributeValue value, AccessRule rule)
@@ -175,18 +139,11 @@ internal sealed class GetAvailablePositionsQueryHandler
             AttributeType.Date when value.DateValue.HasValue =>
                 Compare(value.DateValue.Value.CompareTo(rule.Value.DateValue!.Value), rule.Operator),
             AttributeType.Period when value.PeriodValue is not null =>
-                CompareEquality(
-                    value.PeriodValue.Start == rule.Value.PeriodStart &&
-                    value.PeriodValue.End == rule.Value.PeriodEnd,
-                    rule.Operator),
+                CompareEquality(value.PeriodValue.Start == rule.Value.PeriodStart && value.PeriodValue.End == rule.Value.PeriodEnd, rule.Operator),
             AttributeType.Checkbox when value.CheckboxValue.HasValue =>
-                CompareEquality(
-                    value.CheckboxValue.Value == rule.Value.BooleanValue,
-                    rule.Operator),
+                CompareEquality(value.CheckboxValue.Value == rule.Value.BooleanValue, rule.Operator),
             AttributeType.Dropdown when value.DropdownOptionId.HasValue =>
-                CompareEquality(
-                    value.DropdownOptionId.Value == rule.Value.DropdownOptionId,
-                    rule.Operator),
+                CompareEquality(value.DropdownOptionId.Value == rule.Value.DropdownOptionId, rule.Operator),
             _ => false
         };
     }
@@ -196,10 +153,7 @@ internal sealed class GetAvailablePositionsQueryHandler
         if (value is null)
             return false;
 
-        var equals = string.Equals(
-            value,
-            rule.Value.StringValue,
-            StringComparison.OrdinalIgnoreCase);
+        var equals = string.Equals(value, rule.Value.StringValue, StringComparison.OrdinalIgnoreCase);
 
         return CompareEquality(equals, rule.Operator);
     }

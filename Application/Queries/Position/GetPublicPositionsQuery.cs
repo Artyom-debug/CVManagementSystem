@@ -7,12 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Queries.Position;
 
-public sealed record GetPublicPositionsQuery(
-    int Page = 1,
-    int PageSize = 30) : IRequest<PageResult<PositionDto>>;
+public sealed record GetPublicPositionsQuery(int Page = 1, int PageSize = 30) : IRequest<PageResult<PositionDto>>;
 
-public sealed class GetPublicPositionsQueryValidator
-    : AbstractValidator<GetPublicPositionsQuery>
+public sealed class GetPublicPositionsQueryValidator : AbstractValidator<GetPublicPositionsQuery>
 {
     public GetPublicPositionsQueryValidator()
     {
@@ -25,28 +22,21 @@ public sealed class GetPublicPositionsQueryValidator
     }
 }
 
-internal sealed class GetPublicPositionsQueryHandler
-    : IRequestHandler<GetPublicPositionsQuery, PageResult<PositionDto>>
+internal sealed class GetPublicPositionsQueryHandler : IRequestHandler<GetPublicPositionsQuery, PageResult<PositionDto>>
 {
     private readonly IApplicationDbContext _context;
     private readonly ICacheService _cache;
 
-    public GetPublicPositionsQueryHandler(
-        IApplicationDbContext context,
-        ICacheService cache)
+    public GetPublicPositionsQueryHandler(IApplicationDbContext context, ICacheService cache)
     {
         _context = context;
         _cache = cache;
     }
 
-    public async Task<PageResult<PositionDto>> Handle(
-        GetPublicPositionsQuery request,
-        CancellationToken cancellationToken)
+    public async Task<PageResult<PositionDto>> Handle(GetPublicPositionsQuery request, CancellationToken cancellationToken)
     {
         var cacheKey = $"positions:public:v1:page:{request.Page}:size:{request.PageSize}";
-        var cachedResult = await _cache.GetAsync<PageResult<PositionDto>>(
-            cacheKey,
-            cancellationToken);
+        var cachedResult = await _cache.GetAsync<PageResult<PositionDto>>(cacheKey, cancellationToken);
 
         if (cachedResult is not null)
             return cachedResult;
@@ -59,35 +49,16 @@ internal sealed class GetPublicPositionsQueryHandler
             .ThenBy(position => position.Id)
             .Skip(skip)
             .Take(request.PageSize + 1)
-            .Select(position => new PositionDto(
-                position.Id,
-                position.Version,
-                position.Name,
-                position.Description,
-                position.MaxProjectCount,
-                position.IsPublic,
-                position.Tags
-                    .OrderBy(tag => tag.Name)
-                    .Select(tag => tag.Name)
-                    .ToList()))
+            .Select(position => new PositionDto(position.Id, position.Version, position.Name, position.Description, position.MaxProjectCount, position.IsPublic, position.Tags.OrderBy(tag => tag.Name).Select(tag => tag.Name).ToList()))
             .ToListAsync(cancellationToken);
 
         var hasNextPage = items.Count > request.PageSize;
         if (hasNextPage)
             items.RemoveAt(items.Count - 1);
 
-        var result = new PageResult<PositionDto>(
-            items,
-            request.Page,
-            request.PageSize,
-            hasNextPage);
+        var result = new PageResult<PositionDto>(items, request.Page, request.PageSize, hasNextPage);
 
-        await _cache.SetAsync(
-            cacheKey,
-            result,
-            request.Page <= 3 ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2),
-            cancellationToken,
-            ["position-library"]);
+        await _cache.SetAsync(cacheKey, result, request.Page <= 3 ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2), cancellationToken, ["position-library"]);
 
         return result;
     }

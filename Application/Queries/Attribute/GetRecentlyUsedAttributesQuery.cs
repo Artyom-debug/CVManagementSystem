@@ -8,26 +8,20 @@ namespace Application.Queries.Attribute;
 
 public sealed record GetRecentlyUsedAttributesQuery() : IRequest<IReadOnlyList<AttributeDto>>;
 
-internal sealed class GetRecentlyUsedAttributesQueryHandler
-    : IRequestHandler<GetRecentlyUsedAttributesQuery, IReadOnlyList<AttributeDto>>
+internal sealed class GetRecentlyUsedAttributesQueryHandler : IRequestHandler<GetRecentlyUsedAttributesQuery, IReadOnlyList<AttributeDto>>
 {
     private readonly IApplicationDbContext _context;
     private readonly IRecentAttributesCache _cache;
     private readonly IUser _user;
 
-    public GetRecentlyUsedAttributesQueryHandler(
-        IApplicationDbContext context,
-        IRecentAttributesCache cache,
-        IUser user)
+    public GetRecentlyUsedAttributesQueryHandler(IApplicationDbContext context, IRecentAttributesCache cache, IUser user)
     {
         _context = context;
         _cache = cache;
         _user = user;
     }
 
-    public async Task<IReadOnlyList<AttributeDto>> Handle(
-        GetRecentlyUsedAttributesQuery request,
-        CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<AttributeDto>> Handle(GetRecentlyUsedAttributesQuery request, CancellationToken cancellationToken)
     {
         var userId = _user.Id
             ?? throw new UnauthorizedAccessException("The user is not authenticated.");
@@ -40,13 +34,7 @@ internal sealed class GetRecentlyUsedAttributesQueryHandler
         var attributes = await _context.Attributes
             .AsNoTracking()
             .Where(attribute => attributeIds.Contains(attribute.Id))
-            .Select(attribute => new AttributeDto(
-                attribute.Id,
-                attribute.Version,
-                attribute.Name,
-                attribute.Type,
-                attribute.Category,
-                attribute.IsSystem))
+            .Select(attribute => new AttributeDto(attribute.Id, attribute.Version, attribute.Name, attribute.Type, attribute.Category, attribute.IsSystem))
             .ToListAsync(cancellationToken);
 
         var displayOrder = attributeIds

@@ -8,13 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Commands.Profile;
 
-public sealed record DeleteProjectsRangeCommand(
-    Guid ProfileId,
-    IReadOnlyCollection<Guid> ProjectIds,
-    int Version) : IRequest<Result>;
+public sealed record DeleteProjectsRangeCommand(Guid ProfileId, IReadOnlyCollection<Guid> ProjectIds, int Version) : IRequest<Result>;
 
-public sealed class DeleteProjectsRangeCommandValidator
-    : AbstractValidator<DeleteProjectsRangeCommand>
+public sealed class DeleteProjectsRangeCommandValidator : AbstractValidator<DeleteProjectsRangeCommand>
 {
     public DeleteProjectsRangeCommandValidator()
     {
@@ -31,29 +27,22 @@ public sealed class DeleteProjectsRangeCommandValidator
     }
 }
 
-internal sealed class DeleteProjectsRangeCommandHandler
-    : IRequestHandler<DeleteProjectsRangeCommand, Result>
+internal sealed class DeleteProjectsRangeCommandHandler : IRequestHandler<DeleteProjectsRangeCommand, Result>
 {
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
 
-    public DeleteProjectsRangeCommandHandler(
-        IApplicationDbContext context,
-        IUser user)
+    public DeleteProjectsRangeCommandHandler(IApplicationDbContext context, IUser user)
     {
         _context = context;
         _user = user;
     }
 
-    public async Task<Result> Handle(
-        DeleteProjectsRangeCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(DeleteProjectsRangeCommand request, CancellationToken cancellationToken)
     {
         var profile = await _context.Profiles
             .Include(item => item.Projects)
-            .SingleOrDefaultAsync(
-                item => item.Id == request.ProfileId,
-                cancellationToken);
+            .SingleOrDefaultAsync(item => item.Id == request.ProfileId, cancellationToken);
 
         if (profile is null)
             return Result.Failure("Profile was not found.");
@@ -74,8 +63,7 @@ internal sealed class DeleteProjectsRangeCommandHandler
 
         if (missingProjectIds.Length > 0)
         {
-            return Result.Failure(
-                $"Projects [{string.Join(", ", missingProjectIds)}] were not found in the selected profile.");
+            return Result.Failure($"Projects [{string.Join(", ", missingProjectIds)}] were not found in the selected profile.");
         }
 
         profile.DeleteProjectRange(request.ProjectIds);

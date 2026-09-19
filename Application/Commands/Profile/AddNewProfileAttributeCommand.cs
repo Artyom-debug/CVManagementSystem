@@ -10,13 +10,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Commands.Profile;
 
-public sealed record AddNewProfileAttributeCommand(
-    Guid ProfileId,
-    AttributeValueDto Value,
-    int Version) : IRequest<Result>;
+public sealed record AddNewProfileAttributeCommand(Guid ProfileId, AttributeValueDto Value, int Version) : IRequest<Result>;
 
-public sealed class AddNewProfileAttributeCommandValidator
-    : AbstractValidator<AddNewProfileAttributeCommand>
+public sealed class AddNewProfileAttributeCommandValidator : AbstractValidator<AddNewProfileAttributeCommand>
 {
     public AddNewProfileAttributeCommandValidator()
     {
@@ -30,17 +26,13 @@ public sealed class AddNewProfileAttributeCommandValidator
     }
 }
 
-internal sealed class AddNewProfileAttributeCommandHandler
-    : IRequestHandler<AddNewProfileAttributeCommand, Result>
+internal sealed class AddNewProfileAttributeCommandHandler : IRequestHandler<AddNewProfileAttributeCommand, Result>
 {
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
     private readonly IRecentAttributesCache _recentAttributesCache;
 
-    public AddNewProfileAttributeCommandHandler(
-        IApplicationDbContext context,
-        IUser user,
-        IRecentAttributesCache recentAttributesCache)
+    public AddNewProfileAttributeCommandHandler(IApplicationDbContext context, IUser user, IRecentAttributesCache recentAttributesCache)
     {
         _context = context;
         _user = user;
@@ -48,9 +40,7 @@ internal sealed class AddNewProfileAttributeCommandHandler
 
     }
 
-    public async Task<Result> Handle(
-        AddNewProfileAttributeCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(AddNewProfileAttributeCommand request, CancellationToken cancellationToken)
     {
         var profile = await _context.Profiles
             .Include(item => item.AttributeValues)
@@ -68,9 +58,7 @@ internal sealed class AddNewProfileAttributeCommandHandler
         var attribute = await _context.Attributes
             .AsNoTracking()
             .Include(item => item.Options)
-            .SingleOrDefaultAsync(
-                item => item.Id == request.Value.AttributeId,
-                cancellationToken);
+            .SingleOrDefaultAsync(item => item.Id == request.Value.AttributeId, cancellationToken);
 
         if (attribute is null)
             return Result.Failure($"Attribute '{request.Value.AttributeId}' was not found.");
@@ -87,15 +75,10 @@ internal sealed class AddNewProfileAttributeCommandHandler
             value is Guid optionId &&
             attribute.Options.All(option => option.Id != optionId))
         {
-            return Result.Failure(
-                $"Selected option does not belong to attribute '{attribute.Name}'.");
+            return Result.Failure($"Selected option does not belong to attribute '{attribute.Name}'.");
         }
 
-        profile.SetAttributeValue(
-            attribute.Id,
-            value,
-            attribute.Type,
-            request.Value.Order);
+        profile.SetAttributeValue(attribute.Id, value, attribute.Type, request.Value.Order);
 
         profile.AddDomainEvent(new ProfileChangedEvent(profile.Id));
         _context.SetOriginalVersion(profile, request.Version);
@@ -113,8 +96,7 @@ internal sealed class AddNewProfileAttributeCommandHandler
     }
 }
 
-internal sealed class AttributeValueDtoValidator
-    : AbstractValidator<AttributeValueDto>
+internal sealed class AttributeValueDtoValidator : AbstractValidator<AttributeValueDto>
 {
     public AttributeValueDtoValidator()
     {

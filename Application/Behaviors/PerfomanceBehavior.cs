@@ -17,9 +17,7 @@ public class PerformanceBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
     private readonly ILogger<TRequest> _logger;
     private readonly IUser _user;
 
-    public PerformanceBehavior(
-        ILogger<TRequest> logger,
-        IUser user)
+    public PerformanceBehavior(ILogger<TRequest> logger, IUser user)
     {
         _timer = new Stopwatch();
 
@@ -43,8 +41,7 @@ public class PerformanceBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
             var userId = _user.Id ?? string.Empty;
             var userName = string.Empty;
 
-            _logger.LogWarning("Application Long Running Request: {Name} ({ElapsedMilliseconds} milliseconds) {@UserId} {@UserName} {@Request}",
-                requestName, elapsedMilliseconds, userId, userName, request);
+            _logger.LogWarning("Application Long Running Request: {Name} ({ElapsedMilliseconds} milliseconds) {@UserId} {@UserName} {@Request}", requestName, elapsedMilliseconds, userId, userName, request);
         }
 
         return response;

@@ -4,8 +4,7 @@ using MediatR;
 
 namespace Application.EventHandlers;
 
-public sealed class PositionChangedEventHandler
-    : INotificationHandler<PositionChangedEvent>
+public sealed class PositionChangedEventHandler : INotificationHandler<PositionChangedEvent>
 {
     private readonly ICacheService _cache;
 
@@ -14,16 +13,10 @@ public sealed class PositionChangedEventHandler
         _cache = cache;
     }
 
-    public async Task Handle(
-        PositionChangedEvent notification,
-        CancellationToken cancellationToken)
+    public async Task Handle(PositionChangedEvent notification, CancellationToken cancellationToken)
     {
-        await _cache.RemoveDependenciesAsync(
-            $"position:{notification.PositionId}",
-            cancellationToken);
+        await _cache.RemoveDependenciesAsync($"position:{notification.PositionId}", cancellationToken);
 
-        await _cache.RemoveDependenciesAsync(
-            "position-library",
-            cancellationToken);
+        await _cache.RemoveDependenciesAsync("position-library", cancellationToken);
     }
 }

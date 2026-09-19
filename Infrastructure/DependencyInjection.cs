@@ -1,12 +1,22 @@
-﻿using Application.Interfaces;
+using Application.Interfaces;
+using CloudinaryDotNet;
+using Infrastructure.Auth;
 using Infrastructure.Data;
+using Infrastructure.Models;
+using Infrastructure.Repositories;
 using Infrastructure.Services;
-using Microsoft.AspNetCore.Http;
+using Infrastructure.Services.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
+using System.Security.Claims;
 
 namespace Infrastructure;
 
@@ -14,30 +24,208 @@ public static class DependencyInjection
 {
     public static void AddInfrastructureServices(this IHostApplicationBuilder builder)
     {
-        //postgres config
-        var connectionString = builder.Configuration.GetConnectionString("Postgres") ?? throw new InvalidOperationException("Database connection string was not found."); 
-        builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        {
-            options.UseNpgsql(connectionString);
-        });
-        builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+        AddDatabase(builder);
+        AddIdentity(builder);
+        AddRedis(builder);
+        AddCloudinary(builder);
+    }
 
-        //identity config
+    private static void AddDatabase(IHostApplicationBuilder builder)
+    {
+        var connectionString = builder.Configuration
+            .GetConnectionString("Postgres")
+            ?? throw new InvalidOperationException("Database connection string was not found.");
+
+        builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+
+        builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+    }
+
+    private static void AddIdentity(IHostApplicationBuilder builder)
+    {
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<IUser, CurrentUser>();
 
-        //redis config
-        var redisConnection = builder.Configuration.GetConnectionString("Redis") ?? throw new InvalidOperationException("Redis connection string was not found");
+        builder.Services
+            .AddIdentity<ApplicationUser, IdentityRole>(options =>
+            {
+                options.Password.RequiredLength = 6;
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = false;
+
+                options.User.RequireUniqueEmail = true;
+                options.SignIn.RequireConfirmedEmail = false;
+
+                options.ClaimsIdentity.UserIdClaimType = ClaimTypes.NameIdentifier;
+                options.ClaimsIdentity.UserNameClaimType = ClaimTypes.Name;
+                options.ClaimsIdentity.EmailClaimType = ClaimTypes.Email;
+                options.ClaimsIdentity.RoleClaimType = ClaimTypes.Role;
+
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+            })
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
+
+        var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
+        var jwtOptions = jwtSection.Get<JwtOptions>()
+            ?? throw new InvalidOperationException("JWT configuration was not found.");
+        var signingKey = ValidateJwtOptions(jwtOptions);
+
+        builder.Services.Configure<JwtOptions>(jwtSection);
+
+        builder.Services
+            .AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.MapInboundClaims = false;
+                options.SaveToken = false;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtOptions.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = jwtOptions.Audience,
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(signingKey),
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.FromMinutes(1),
+                    NameClaimType = ClaimTypes.Name,
+                    RoleClaimType = ClaimTypes.Role
+                };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = ValidateSecurityStampAsync
+                };
+            });
+
+        builder.Services.AddScoped<ITokenService, TokenService>();
+        builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        builder.Services.AddScoped<IIdentityService, IdentityService>();
+        builder.Services.AddSingleton(TimeProvider.System);
+    }
+
+    private static async Task ValidateSecurityStampAsync(TokenValidatedContext context)
+    {
+        var userId = context.Principal?
+            .FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? context.Principal?
+                .FindFirstValue(JwtRegisteredClaimNames.Sub);
+        var tokenStamp = context.Principal?
+            .FindFirstValue(TokenService.SecurityStampClaim);
+
+        if (string.IsNullOrWhiteSpace(userId) ||
+            string.IsNullOrWhiteSpace(tokenStamp))
+        {
+            context.Fail("The access token is missing required claims.");
+            return;
+        }
+
+        var userManager = context.HttpContext.RequestServices
+            .GetRequiredService<UserManager<ApplicationUser>>();
+        var signInManager = context.HttpContext.RequestServices
+            .GetRequiredService<SignInManager<ApplicationUser>>();
+        var user = await userManager.FindByIdAsync(userId);
+
+        if (user is null ||
+            !await signInManager.CanSignInAsync(user) ||
+            await userManager.IsLockedOutAsync(user))
+        {
+            context.Fail("The user cannot sign in.");
+            return;
+        }
+
+        var currentStamp = await userManager.GetSecurityStampAsync(user);
+        if (!string.Equals(tokenStamp, currentStamp, StringComparison.Ordinal))
+            context.Fail("The access token has been revoked.");
+    }
+
+    private static byte[] ValidateJwtOptions(JwtOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.Issuer) ||
+            string.IsNullOrWhiteSpace(options.Audience) ||
+            string.IsNullOrWhiteSpace(options.SecretKey) ||
+            options.TokenValidityMins <= 0 ||
+            options.RefreshTokenValidityDays <= 0)
+        {
+            throw new InvalidOperationException("JWT configuration is invalid.");
+        }
+
+        byte[] signingKey;
+        try
+        {
+            signingKey = Convert.FromBase64String(options.SecretKey);
+        }
+        catch (FormatException exception)
+        {
+            throw new InvalidOperationException("JWT secret key must be a valid Base64 string.", exception);
+        }
+
+        if (signingKey.Length < 32)
+        {
+            throw new InvalidOperationException("JWT secret key must contain at least 32 bytes.");
+        }
+
+        return signingKey;
+    }
+
+    private static void AddRedis(IHostApplicationBuilder builder)
+    {
+        var redisConnection = builder.Configuration
+            .GetConnectionString("Redis")
+            ?? throw new InvalidOperationException("Redis connection string was not found.");
+
         builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
         {
             var options = ConfigurationOptions.Parse(redisConnection);
-
             options.AbortOnConnectFail = false;
             options.ClientName = "CVManagementSystem";
-
             return ConnectionMultiplexer.Connect(options);
         });
+
         builder.Services.AddSingleton<ICacheService, RedisCacheService>();
         builder.Services.AddSingleton<IRecentAttributesCache, RecentAttributesCache>();
+    }
+
+    private static void AddCloudinary(IHostApplicationBuilder builder)
+    {
+        var section = builder.Configuration
+            .GetSection(CloudinaryOptions.SectionName);
+
+        builder.Services
+            .AddOptions<CloudinaryOptions>()
+            .Bind(section)
+            .Validate(options => !string.IsNullOrWhiteSpace(options.CloudName), "Cloudinary cloud name is required.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.ApiKey), "Cloudinary API key is required.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.ApiSecret), "Cloudinary API secret is required.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.UploadPreset), "Cloudinary upload preset is required.")
+            .Validate(options => options.DeliveryType is "upload" or "private" or "authenticated", "Unknown Cloudinary delivery type.")
+            .ValidateOnStart();
+
+        builder.Services.AddSingleton(provider =>
+        {
+            var options = provider
+                .GetRequiredService<IOptions<CloudinaryOptions>>()
+                .Value;
+
+            var account = new Account(options.CloudName, options.ApiKey, options.ApiSecret);
+
+            var cloudinary = new Cloudinary(account);
+
+            cloudinary.Api.Secure = true;
+
+            return cloudinary;
+        });
+
+        builder.Services.AddSingleton<IImageStorage, ImageStorage>();
     }
 }

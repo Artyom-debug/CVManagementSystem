@@ -8,11 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Queries.Profile;
 
-public sealed record GetReadonlyProfileQuery(Guid ProfileId)
-    : IRequest<ReadonlyProfileDto>;
+public sealed record GetReadonlyProfileQuery(Guid ProfileId) : IRequest<ReadonlyProfileDto>;
 
-public sealed class GetReadonlyProfileQueryValidator
-    : AbstractValidator<GetReadonlyProfileQuery>
+public sealed class GetReadonlyProfileQueryValidator : AbstractValidator<GetReadonlyProfileQuery>
 {
     public GetReadonlyProfileQueryValidator()
     {
@@ -20,28 +18,21 @@ public sealed class GetReadonlyProfileQueryValidator
     }
 }
 
-internal sealed class GetReadonlyProfileQueryHandler
-    : IRequestHandler<GetReadonlyProfileQuery, ReadonlyProfileDto>
+internal sealed class GetReadonlyProfileQueryHandler : IRequestHandler<GetReadonlyProfileQuery, ReadonlyProfileDto>
 {
     private readonly IApplicationDbContext _context;
     private readonly ICacheService _cache;
 
-    public GetReadonlyProfileQueryHandler(
-        IApplicationDbContext context,
-        ICacheService cache)
+    public GetReadonlyProfileQueryHandler(IApplicationDbContext context, ICacheService cache)
     {
         _context = context;
         _cache = cache;
     }
 
-    public async Task<ReadonlyProfileDto> Handle(
-        GetReadonlyProfileQuery request,
-        CancellationToken cancellationToken)
+    public async Task<ReadonlyProfileDto> Handle(GetReadonlyProfileQuery request, CancellationToken cancellationToken)
     {
         var cacheKey = $"profile-readonly:v1:{request.ProfileId}";
-        var cachedProfile = await _cache.GetAsync<ReadonlyProfileDto>(
-            cacheKey,
-            cancellationToken);
+        var cachedProfile = await _cache.GetAsync<ReadonlyProfileDto>(cacheKey, cancellationToken);
 
         if (cachedProfile is not null)
             return cachedProfile;
@@ -62,74 +53,24 @@ internal sealed class GetReadonlyProfileQueryHandler
             .AsNoTracking()
             .Where(value => value.ProfileId == profile.Id)
             .OrderBy(value => value.Order)
-            .Select(value => new ProfileAttributeDto(
-                new AttributeValueDto(
-                    value.AttributeId,
-                    value.Order,
-                    value.Attribute!.Type == AttributeType.String
-                        ? value.StringValue
-                        : value.Attribute.Type == AttributeType.Text
-                            ? value.TextValue
-                            : value.Attribute.Type == AttributeType.Image
-                                ? value.ImageValue
-                                : null,
-                    value.NumericValue,
-                    value.DateValue,
-                    value.PeriodValue,
-                    value.CheckboxValue,
-                    value.DropdownOptionId),
-                new DetailedAttributeDto(
-                    value.Attribute.Id,
-                    value.Attribute.Version,
-                    value.Attribute.Name,
-                    value.Attribute.Description,
-                    value.Attribute.Type,
-                    value.Attribute.Category,
-                    value.Attribute.IsSystem,
-                    value.Attribute.Options
-                        .OrderBy(option => option.Option)
-                        .Select(option => new AttributeOptionDto(
-                            option.Id,
-                            option.Option))
-                        .ToList())))
+            .Select(value => new ProfileAttributeDto(new AttributeValueDto(value.AttributeId, value.Order, value.Attribute!.Type == AttributeType.String ? value.StringValue : value.Attribute.Type == AttributeType.Text ? value.TextValue : value.Attribute.Type == AttributeType.Image ? value.ImageValue : null, value.NumericValue, value.DateValue, value.PeriodValue, value.CheckboxValue, value.DropdownOptionId), new DetailedAttributeDto(value.Attribute.Id, value.Attribute.Version, value.Attribute.Name, value.Attribute.Description, value.Attribute.Type, value.Attribute.Category, value.Attribute.IsSystem, value.Attribute.Options.OrderBy(option => option.Option).Select(option => new AttributeOptionDto(option.Id, option.Option)).ToList())))
             .ToListAsync(cancellationToken);
 
         var projects = await _context.Projects
             .AsNoTracking()
             .Where(project => project.ProfileId == profile.Id)
             .OrderBy(project => project.Name)
-            .Select(project => new ProjectDto(
-                project.Id,
-                project.Name,
-                project.Description,
-                project.Period,
-                project.Tags
-                    .OrderBy(tag => tag.Name)
-                    .Select(tag => tag.Name)
-                    .ToList()))
+            .Select(project => new ProjectDto(project.Id, project.Name, project.Description, project.Period, project.Tags.OrderBy(tag => tag.Name).Select(tag => tag.Name).ToList()))
             .ToListAsync(cancellationToken);
 
         var cvs = await _context.CVs
             .AsNoTracking()
             .Where(cv => cv.ProfileId == profile.Id && cv.Status == Status.Published)
             .OrderByDescending(cv => cv.LastUpdated)
-            .Select(cv => new CVDto(
-                cv.Id,
-                cv.PositionId,
-                cv.Position!.Name,
-                cv.Status,
-                cv.CreatedAt,
-                cv.LastUpdated,
-                cv.PublishedAt))
+            .Select(cv => new CVDto(cv.Id, cv.PositionId, cv.Position!.Name, cv.Status, cv.CreatedAt, cv.LastUpdated, cv.PublishedAt))
             .ToListAsync(cancellationToken);
 
-        var result = new ReadonlyProfileDto(
-            profile.Id,
-            profile.CreatedAt,
-            profile.UpdatedAt,
-            attributes,
-            projects,
-            cvs);
+        var result = new ReadonlyProfileDto(profile.Id, profile.CreatedAt, profile.UpdatedAt, attributes, projects, cvs);
 
         var dependencies = attributes
             .Select(attribute => $"attribute:{attribute.Attribute.Id}")
@@ -138,12 +79,7 @@ internal sealed class GetReadonlyProfileQueryHandler
             .Distinct()
             .ToArray();
 
-        await _cache.SetAsync(
-            cacheKey,
-            result,
-            TimeSpan.FromMinutes(10),
-            cancellationToken,
-            dependencies);
+        await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10), cancellationToken, dependencies);
 
         return result;
     }

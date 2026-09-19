@@ -8,18 +8,9 @@ using PositionEntity = Domain.Entities.Position;
 
 namespace Application.Commands.Position;
 
-public sealed record CreatePositionCommand(
-    string Name,
-    string? Description,
-    int MaxProjectCount,
-    bool IsPublic,
-    IReadOnlyCollection<PositionAttributeInput> Attributes,
-    IReadOnlyCollection<string> Tags,
-    IReadOnlyCollection<PositionAccessRuleInput> AccessRules)
-    : IRequest<Result>;
+public sealed record CreatePositionCommand(string Name, string? Description, int MaxProjectCount, bool IsPublic, IReadOnlyCollection<PositionAttributeInput> Attributes, IReadOnlyCollection<string> Tags, IReadOnlyCollection<PositionAccessRuleInput> AccessRules) : IRequest<Result>;
 
-public sealed class CreatePositionCommandValidator
-    : AbstractValidator<CreatePositionCommand>
+public sealed class CreatePositionCommandValidator : AbstractValidator<CreatePositionCommand>
 {
     public CreatePositionCommandValidator()
     {
@@ -79,12 +70,10 @@ public sealed class CreatePositionCommandValidator
             .WithMessage("Access rules must be unique.");
     }
 
-    internal static bool HaveUniqueAttributeIds(
-        IReadOnlyCollection<PositionAttributeInput> attributes) =>
+    internal static bool HaveUniqueAttributeIds(IReadOnlyCollection<PositionAttributeInput> attributes) =>
         attributes.Select(attribute => attribute.AttributeId).Distinct().Count() == attributes.Count;
 
-    internal static bool HaveSequentialDisplayOrders(
-        IReadOnlyCollection<PositionAttributeInput> attributes) =>
+    internal static bool HaveSequentialDisplayOrders(IReadOnlyCollection<PositionAttributeInput> attributes) =>
         attributes.Select(attribute => attribute.DisplayOrder)
             .OrderBy(order => order)
             .SequenceEqual(Enumerable.Range(0, attributes.Count));
@@ -95,8 +84,7 @@ public sealed class CreatePositionCommandValidator
             .Count() == tags.Count;
 }
 
-internal sealed class CreatePositionCommandHandler
-    : IRequestHandler<CreatePositionCommand, Result>
+internal sealed class CreatePositionCommandHandler : IRequestHandler<CreatePositionCommand, Result>
 {
     private readonly IApplicationDbContext _context;
 
@@ -105,9 +93,7 @@ internal sealed class CreatePositionCommandHandler
         _context = context;
     }
 
-    public async Task<Result> Handle(
-        CreatePositionCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(CreatePositionCommand request, CancellationToken cancellationToken)
     {
         var tagNames = request.Tags
             .Select(tag => tag.Trim().ToUpperInvariant())
@@ -136,25 +122,16 @@ internal sealed class CreatePositionCommandHandler
 
         var attributesById = attributes.ToDictionary(attribute => attribute.Id);
 
-        if (!PositionCommandModels.TryCreateAccessRules(
-                request.AccessRules,
-                attributesById,
-                out var accessRules,
-                out var ruleError))
+        if (!PositionCommandModels.TryCreateAccessRules(request.AccessRules, attributesById, out var accessRules, out var ruleError))
         {
             return Result.Failure(ruleError!);
         }
 
-        var position = new PositionEntity(
-            request.Name.Trim(),
-            request.Description ?? string.Empty,
-            request.MaxProjectCount);
+        var position = new PositionEntity(request.Name.Trim(), request.Description ?? string.Empty, request.MaxProjectCount);
 
         foreach (var attribute in request.Attributes.OrderBy(attribute => attribute.DisplayOrder))
         {
-            position.AddPositionAttribute(
-                attribute.AttributeId,
-                attribute.DisplayOrder);
+            position.AddPositionAttribute(attribute.AttributeId, attribute.DisplayOrder);
         }
 
         if (tags.Count > 0)

@@ -7,9 +7,4 @@ using System.Threading.Tasks;
 
 namespace Application.Dtos;
 
-public sealed record ProjectDto(
-    Guid Id,
-    string Name,
-    string Description,
-    Period Period,
-    IReadOnlyList<string> Tags);
+public sealed record ProjectDto(Guid Id, string Name, string Description, Period Period, IReadOnlyList<string> Tags);

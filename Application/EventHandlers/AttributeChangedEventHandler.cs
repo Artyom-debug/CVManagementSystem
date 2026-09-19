@@ -4,8 +4,7 @@ using MediatR;
 
 namespace Application.EventHandlers;
 
-public sealed class AttributeChangedEventHandler
-    : INotificationHandler<AttributesChangedEvent>
+public sealed class AttributeChangedEventHandler : INotificationHandler<AttributesChangedEvent>
 {
     private readonly ICacheService _cache;
 
@@ -14,19 +13,13 @@ public sealed class AttributeChangedEventHandler
         _cache = cache;
     }
 
-    public async Task Handle(
-        AttributesChangedEvent notification,
-        CancellationToken cancellationToken)
+    public async Task Handle(AttributesChangedEvent notification, CancellationToken cancellationToken)
     {
-        await _cache.RemoveDependenciesAsync(
-            "attribute-library",
-            cancellationToken);
+        await _cache.RemoveDependenciesAsync("attribute-library", cancellationToken);
 
         foreach (var attributeId in notification.AttributeIds)
         {
-            await _cache.RemoveDependenciesAsync(
-                $"attribute:{attributeId}",
-                cancellationToken);
+            await _cache.RemoveDependenciesAsync($"attribute:{attributeId}", cancellationToken);
         }
     }
 }

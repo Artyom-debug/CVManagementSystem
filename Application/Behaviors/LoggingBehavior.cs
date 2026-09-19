@@ -1,12 +1,6 @@
 ﻿using Application.Interfaces;
 using MediatR.Pipeline;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Application.Behaviors;
 
 
@@ -22,13 +16,13 @@ public class LoggingBehaviour<TRequest> : IRequestPreProcessor<TRequest>
         _user = user;
     }
 
-    public async Task Process(TRequest request, CancellationToken cancellationToken)
+    public Task Process(TRequest request, CancellationToken cancellationToken)
     {
         var requestName = typeof(TRequest).Name;
         var userId = _user.Id ?? string.Empty;
-        string? userName = string.Empty;
 
-        _logger.LogInformation("Project Request: {Name} {@UserId} {@UserName} {@Request}",
-            requestName, userId, userName, request);
+        _logger.LogInformation("Project Request: {Name} {UserId}", requestName, userId);
+
+        return Task.CompletedTask;
     }
 }

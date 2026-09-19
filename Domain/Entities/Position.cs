@@ -62,10 +62,7 @@ public sealed class Position : BaseEntity
     public void SetProjectCount(int count)
     {
         if (count < 0)
-            throw new ArgumentOutOfRangeException(
-                nameof(count),
-                count,
-                "Project count cannot be negative");
+            throw new ArgumentOutOfRangeException(nameof(count), count, "Project count cannot be negative");
         if (MaxProjectCount == count)
             return;
         MaxProjectCount = count;
@@ -163,10 +160,7 @@ public sealed class Position : BaseEntity
         if (_positionAttributes.Any(item => item.AttributeId == attributeId))
             throw new InvalidOperationException("Position already contains this attribute");
         if (displayOrder < 0)
-            throw new ArgumentOutOfRangeException(
-                nameof(displayOrder),
-                displayOrder,
-                "Display order cannot be negative");
+            throw new ArgumentOutOfRangeException(nameof(displayOrder), displayOrder, "Display order cannot be negative");
         if (_positionAttributes.Any(item => item.DisplayOrder == displayOrder))
             throw new InvalidOperationException("Position already contains an attribute with this display order");
         var positionAttribute = new PositionAttribute(this.Id, attributeId, displayOrder);

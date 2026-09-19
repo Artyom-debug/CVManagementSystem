@@ -13,9 +13,7 @@ public sealed class PositionConfiguration : IEntityTypeConfiguration<Position>
     {
         builder.ToTable("Positions", table =>
         {
-            table.HasCheckConstraint(
-                "CK_Positions_MaxProjectCount_NonNegative",
-                "\"MaxProjectCount\" >= 0");
+            table.HasCheckConstraint("CK_Positions_MaxProjectCount_NonNegative", "\"MaxProjectCount\" >= 0");
         });
 
         builder.ConfigureBaseEntity();
@@ -81,11 +79,7 @@ public sealed class PositionConfiguration : IEntityTypeConfiguration<Position>
                 .HasColumnName("Value")
                 .IsRequired();
 
-            valueProperty.Metadata.SetValueComparer(
-                new ValueComparer<AccessRuleValue>(
-                    (left, right) => left == right,
-                    value => value.GetHashCode(),
-                    value => value));
+            valueProperty.Metadata.SetValueComparer(new ValueComparer<AccessRuleValue>((left, right) => left == right, value => value.GetHashCode(), value => value));
 
             rules.HasOne<Domain.Entities.Attribute>()
                 .WithMany()

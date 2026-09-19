@@ -77,21 +77,6 @@ public sealed class Attribute : BaseEntity
         Category = category;
     }
 
-    public void AddOptionToDropdown(string option)
-    {
-        if (IsSystem)
-            throw new InvalidOperationException("Cannot modify system attribute");
-        if (Type != AttributeType.Dropdown)
-            throw new InvalidOperationException("This attribute does not support dropdown options");
-        if (string.IsNullOrWhiteSpace(option))
-            throw new ArgumentException("Option value cannot be empty", nameof(option));
-        var optionName = option.Trim();
-        if (_options.Any(existing => string.Equals(existing.Option, optionName, StringComparison.OrdinalIgnoreCase)))
-            return;
-        var newOption = new AttributeOptions(optionName, Id);
-        _options.Add(newOption);
-    }
-
     public void AddOptionsRange(IReadOnlyCollection<string> options)
     {
         if (IsSystem)
@@ -119,22 +104,6 @@ public sealed class Attribute : BaseEntity
             return;
 
         _options.AddRange(newOptions);
-    }
-
-    public void RemoveOption(Guid optionId)
-    {
-        if (IsSystem)
-            throw new InvalidOperationException("Can't modify system attribute");
-        if (Type != AttributeType.Dropdown)
-            throw new InvalidOperationException("This attribute doesn't support dropdown options");
-        if (optionId == Guid.Empty)
-            throw new ArgumentException("Option id cannot be empty", nameof(optionId));
-
-        var option = _options.FirstOrDefault(o => o.Id == optionId);
-        if (option == null)
-            return;
-
-        _options.Remove(option);
     }
 
     public void RemoveOptionRange(IReadOnlyCollection<Guid> optionIds)
@@ -178,5 +147,5 @@ public sealed class Attribute : BaseEntity
         option.UpdateOption(optionName);
     }
 
-    private static string NormalizeName(string name) => name.ToUpperInvariant();
+    private static string NormalizeName(string name) => name.Trim().ToUpperInvariant();
 }

@@ -6,7 +6,5 @@ using System.Threading.Tasks;
 
 namespace Application.Dtos;
 
-public sealed record ProfileAttributeDto(
-    AttributeValueDto Value,
-    DetailedAttributeDto Attribute);
+public sealed record ProfileAttributeDto(AttributeValueDto Value, DetailedAttributeDto Attribute);
 

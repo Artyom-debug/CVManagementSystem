@@ -10,12 +10,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Commands.CV;
 
-public sealed record PublishCVCommand(
-    Guid CVId,
-    int Version) : IRequest<Result>;
+public sealed record PublishCVCommand(Guid CVId, int Version) : IRequest<Result>;
 
-public sealed class PublishCVCommandValidator
-    : AbstractValidator<PublishCVCommand>
+public sealed class PublishCVCommandValidator : AbstractValidator<PublishCVCommand>
 {
     public PublishCVCommandValidator()
     {
@@ -24,29 +21,22 @@ public sealed class PublishCVCommandValidator
     }
 }
 
-internal sealed class PublishCVCommandHandler
-    : IRequestHandler<PublishCVCommand, Result>
+internal sealed class PublishCVCommandHandler : IRequestHandler<PublishCVCommand, Result>
 {
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
 
-    public PublishCVCommandHandler(
-        IApplicationDbContext context,
-        IUser user)
+    public PublishCVCommandHandler(IApplicationDbContext context, IUser user)
     {
         _context = context;
         _user = user;
     }
 
-    public async Task<Result> Handle(
-        PublishCVCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(PublishCVCommand request, CancellationToken cancellationToken)
     {
         var cv = await _context.CVs
             .Include(cv => cv.Profile)
-            .SingleOrDefaultAsync(
-                cv => cv.Id == request.CVId,
-                cancellationToken);
+            .SingleOrDefaultAsync(cv => cv.Id == request.CVId, cancellationToken);
 
         if (cv is null)
             return Result.Failure("CV was not found.");
@@ -81,31 +71,21 @@ internal sealed class PublishCVCommandHandler
 
         var profileValues = await _context.ProfileAttributes
             .AsNoTracking()
-            .Where(value =>
-                value.ProfileId == cv.ProfileId &&
-                positionAttributeIds.Contains(value.AttributeId))
-            .ToDictionaryAsync(
-                value => value.AttributeId,
-                cancellationToken);
+            .Where(value => value.ProfileId == cv.ProfileId && positionAttributeIds.Contains(value.AttributeId))
+            .ToDictionaryAsync(value => value.AttributeId, cancellationToken);
 
         var unfilledAttributes = positionAttributes
-            .Where(attribute =>
-                !profileValues.TryGetValue(attribute.AttributeId, out var profileValue) ||
-                !HasValue(profileValue, attribute.Type))
+            .Where(attribute => !profileValues.TryGetValue(attribute.AttributeId, out var profileValue) || !HasValue(profileValue, attribute.Type))
             .Select(attribute => attribute.Name)
             .ToArray();
 
         if (unfilledAttributes.Length > 0)
         {
-            return Result.Failure(unfilledAttributes.Select(name =>
-                $"Attribute '{name}' must be filled before the CV can be published."));
+            return Result.Failure(unfilledAttributes.Select(name => $"Attribute '{name}' must be filled before the CV can be published."));
         }
 
         cv.Publish();
-        cv.AddDomainEvent(new CVChangedEvent(
-            cv.Id,
-            cv.ProfileId,
-            cv.PositionId));
+        cv.AddDomainEvent(new CVChangedEvent(cv.Id, cv.ProfileId, cv.PositionId));
         _context.SetOriginalVersion(cv, request.Version);
 
         try

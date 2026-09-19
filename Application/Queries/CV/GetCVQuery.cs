@@ -19,26 +19,20 @@ public sealed class GetCVQueryValidator : AbstractValidator<GetCVQuery>
     }
 }
 
-internal sealed class GetCVQueryHandler
-    : IRequestHandler<GetCVQuery, CVDetailsDto>
+internal sealed class GetCVQueryHandler : IRequestHandler<GetCVQuery, CVDetailsDto>
 {
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
     private readonly ICacheService _cache;
 
-    public GetCVQueryHandler(
-        IApplicationDbContext context,
-        IUser user,
-        ICacheService cache)
+    public GetCVQueryHandler(IApplicationDbContext context, IUser user, ICacheService cache)
     {
         _context = context;
         _user = user;
         _cache = cache;
     }
 
-    public async Task<CVDetailsDto> Handle(
-        GetCVQuery request,
-        CancellationToken cancellationToken)
+    public async Task<CVDetailsDto> Handle(GetCVQuery request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_user.Id))
             throw new UnauthorizedAccessException("User is not authenticated.");
@@ -76,9 +70,7 @@ internal sealed class GetCVQueryHandler
             throw new ForbiddenAccessException("You do not have permission to view this CV.");
 
         var cacheKey = $"cv-details:v1:{cv.Id}:user:{_user.Id}";
-        var cachedCV = await _cache.GetAsync<CVDetailsDto>(
-            cacheKey,
-            cancellationToken);
+        var cachedCV = await _cache.GetAsync<CVDetailsDto>(cacheKey, cancellationToken);
 
         if (cachedCV is not null)
             return cachedCV;
@@ -87,42 +79,7 @@ internal sealed class GetCVQueryHandler
             .AsNoTracking()
             .Where(p => p.PositionId == cv.PositionId)
             .OrderBy(p => p.DisplayOrder)
-            .Select(p => new CVAttributeDto(
-                p.DisplayOrder,
-                new DetailedAttributeDto(
-                    p.AttributeId,
-                    p.Attribute!.Version,
-                    p.Attribute.Name,
-                    p.Attribute.Description,
-                    p.Attribute.Type,
-                    p.Attribute.Category,
-                    p.Attribute.IsSystem,
-                    p.Attribute.Options
-                        .OrderBy(option => option.Option)
-                        .Select(option => new AttributeOptionDto(
-                            option.Id,
-                            option.Option))
-                        .ToList()),
-                _context.ProfileAttributes
-                    .Where(pv =>
-                        pv.ProfileId == cv.ProfileId &&
-                        pv.AttributeId == p.AttributeId)
-                    .Select(pv => new AttributeValueDto(
-                        pv.AttributeId,
-                        pv.Order,
-                        pv.Attribute!.Type == AttributeType.String
-                            ? pv.StringValue
-                            : pv.Attribute.Type == AttributeType.Text
-                                ? pv.TextValue
-                                : pv.Attribute.Type == AttributeType.Image
-                                    ? pv.ImageValue
-                                    : null,
-                        pv.NumericValue,
-                        pv.DateValue,
-                        pv.PeriodValue,
-                        pv.CheckboxValue,
-                        pv.DropdownOptionId))
-                    .SingleOrDefault()))
+            .Select(p => new CVAttributeDto(p.DisplayOrder, new DetailedAttributeDto(p.AttributeId, p.Attribute!.Version, p.Attribute.Name, p.Attribute.Description, p.Attribute.Type, p.Attribute.Category, p.Attribute.IsSystem, p.Attribute.Options.OrderBy(option => option.Option).Select(option => new AttributeOptionDto(option.Id, option.Option)).ToList()), _context.ProfileAttributes.Where(pv => pv.ProfileId == cv.ProfileId && pv.AttributeId == p.AttributeId).Select(pv => new AttributeValueDto(pv.AttributeId, pv.Order, pv.Attribute!.Type == AttributeType.String ? pv.StringValue : pv.Attribute.Type == AttributeType.Text ? pv.TextValue : pv.Attribute.Type == AttributeType.Image ? pv.ImageValue : null, pv.NumericValue, pv.DateValue, pv.PeriodValue, pv.CheckboxValue, pv.DropdownOptionId)).SingleOrDefault()))
             .ToListAsync(cancellationToken);
 
         List<ProjectDto> projects = [];
@@ -135,41 +92,17 @@ internal sealed class GetCVQueryHandler
 
             if (cv.PositionTags.Length > 0)
             {
-                projectsQuery = projectsQuery.Where(project =>
-                    project.Tags.Any(tag => cv.PositionTags.Contains(tag.Name)));
+                projectsQuery = projectsQuery.Where(project => project.Tags.Any(tag => cv.PositionTags.Contains(tag.Name)));
             }
 
             projects = await projectsQuery
                 .OrderByDescending(project => project.Period.Start)
                 .Take(cv.MaxProjectCount)
-                .Select(project => new ProjectDto(
-                    project.Id,
-                    project.Name,
-                    project.Description,
-                    project.Period,
-                    project.Tags
-                        .OrderBy(tag => tag.Name)
-                        .Select(tag => tag.Name)
-                        .ToList()))
+                .Select(project => new ProjectDto(project.Id, project.Name, project.Description, project.Period, project.Tags.OrderBy(tag => tag.Name).Select(tag => tag.Name).ToList()))
                 .ToListAsync(cancellationToken);
         }
 
-        var result = new CVDetailsDto(
-            cv.Id,
-            cv.Version,
-            cv.ProfileId,
-            cv.ProfileVersion,
-            cv.PositionId,
-            cv.PositionName,
-            cv.PositionDescription,
-            cv.Status,
-            cv.CreatedAt,
-            cv.LastUpdated,
-            cv.PublishedAt,
-            attributes,
-            projects,
-            cv.LikesCount,
-            cv.IsLikedByCurrentUser);
+        var result = new CVDetailsDto(cv.Id, cv.Version, cv.ProfileId, cv.ProfileVersion, cv.PositionId, cv.PositionName, cv.PositionDescription, cv.Status, cv.CreatedAt, cv.LastUpdated, cv.PublishedAt, attributes, projects, cv.LikesCount, cv.IsLikedByCurrentUser);
 
         var dependencies = attributes
             .Select(attribute => $"attribute:{attribute.Attribute.Id}")
@@ -179,12 +112,7 @@ internal sealed class GetCVQueryHandler
             .Distinct()
             .ToArray();
 
-        await _cache.SetAsync(
-            cacheKey,
-            result,
-            TimeSpan.FromMinutes(10),
-            cancellationToken,
-            dependencies);
+        await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10), cancellationToken, dependencies);
 
         return result;
     }

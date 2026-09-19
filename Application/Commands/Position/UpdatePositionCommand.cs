@@ -7,20 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Commands.Position;
 
-public sealed record UpdatePositionCommand(
-    Guid PositionId,
-    int Version,
-    string Name,
-    string? Description,
-    int MaxProjectCount,
-    bool IsPublic,
-    IReadOnlyCollection<PositionAttributeInput> Attributes,
-    IReadOnlyCollection<string> Tags,
-    IReadOnlyCollection<PositionAccessRuleInput> AccessRules)
-    : IRequest<Result>;
+public sealed record UpdatePositionCommand(Guid PositionId, int Version, string Name, string? Description, int MaxProjectCount, bool IsPublic, IReadOnlyCollection<PositionAttributeInput> Attributes, IReadOnlyCollection<string> Tags, IReadOnlyCollection<PositionAccessRuleInput> AccessRules) : IRequest<Result>;
 
-public sealed class UpdatePositionCommandValidator
-    : AbstractValidator<UpdatePositionCommand>
+public sealed class UpdatePositionCommandValidator : AbstractValidator<UpdatePositionCommand>
 {
     public UpdatePositionCommandValidator()
     {
@@ -84,8 +73,7 @@ public sealed class UpdatePositionCommandValidator
     }
 }
 
-internal sealed class UpdatePositionCommandHandler
-    : IRequestHandler<UpdatePositionCommand, Result>
+internal sealed class UpdatePositionCommandHandler : IRequestHandler<UpdatePositionCommand, Result>
 {
     private readonly IApplicationDbContext _context;
 
@@ -94,17 +82,13 @@ internal sealed class UpdatePositionCommandHandler
         _context = context;
     }
 
-    public async Task<Result> Handle(
-        UpdatePositionCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(UpdatePositionCommand request, CancellationToken cancellationToken)
     {
         var position = await _context.Positions
             .Include(position => position.PositionAttributes)
             .Include(position => position.Tags)
             .Include(position => position.AccessRules)
-            .SingleOrDefaultAsync(
-                position => position.Id == request.PositionId,
-                cancellationToken);
+            .SingleOrDefaultAsync(position => position.Id == request.PositionId, cancellationToken);
 
         if (position is null)
             return Result.Failure("Position was not found.");
@@ -134,11 +118,7 @@ internal sealed class UpdatePositionCommandHandler
         if (attributes.Count != attributeIds.Count)
             return Result.Failure("One or more selected attributes do not exist.");
 
-        if (!PositionCommandModels.TryCreateAccessRules(
-                request.AccessRules,
-                attributes.ToDictionary(attribute => attribute.Id),
-                out var accessRules,
-                out var ruleError))
+        if (!PositionCommandModels.TryCreateAccessRules(request.AccessRules, attributes.ToDictionary(attribute => attribute.Id), out var accessRules, out var ruleError))
         {
             return Result.Failure(ruleError!);
         }
@@ -156,9 +136,7 @@ internal sealed class UpdatePositionCommandHandler
 
         foreach (var attribute in request.Attributes.OrderBy(attribute => attribute.DisplayOrder))
         {
-            position.AddPositionAttribute(
-                attribute.AttributeId,
-                attribute.DisplayOrder);
+            position.AddPositionAttribute(attribute.AttributeId, attribute.DisplayOrder);
         }
 
         var requestedTagNames = tags.Select(tag => tag.Name).ToHashSet();
@@ -192,8 +170,7 @@ internal sealed class UpdatePositionCommandHandler
         }
         catch (DbUpdateConcurrencyException)
         {
-            return Result.Failure(
-                "The position was changed by another request. Reload it and try again.");
+            return Result.Failure("The position was changed by another request. Reload it and try again.");
         }
 
         return Result.Success(position.Version);

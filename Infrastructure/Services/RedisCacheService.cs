@@ -14,9 +14,7 @@ public sealed class RedisCacheService : ICacheService
         _database = connection.GetDatabase();
     }
 
-    public async Task<T?> GetAsync<T>(
-        string key,
-        CancellationToken token)
+    public async Task<T?> GetAsync<T>(string key, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Cache key cannot be empty.", nameof(key)); ;
@@ -32,12 +30,7 @@ public sealed class RedisCacheService : ICacheService
         return JsonSerializer.Deserialize<T>(json.ToString());
     }
 
-    public async Task SetAsync<T>(
-        string key,
-        T value,
-        TimeSpan expiration,
-        CancellationToken token,
-        IEnumerable<string>? dependencies = null)
+    public async Task SetAsync<T>(string key, T value, TimeSpan expiration, CancellationToken token, IEnumerable<string>? dependencies = null)
     {
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Cache key cannot be empty.", nameof(key)); ;
@@ -45,9 +38,7 @@ public sealed class RedisCacheService : ICacheService
 
         if (expiration <= TimeSpan.Zero)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(expiration),
-                "Expiration must be greater than zero.");
+            throw new ArgumentOutOfRangeException(nameof(expiration), "Expiration must be greater than zero.");
         }
 
         token.ThrowIfCancellationRequested();
@@ -79,9 +70,7 @@ public sealed class RedisCacheService : ICacheService
 
                 await _database.SetAddAsync(dependencyKey, key);
 
-                await _database.KeyExpireAsync(
-                    dependencyKey,
-                    TimeSpan.FromDays(1));
+                await _database.KeyExpireAsync(dependencyKey, TimeSpan.FromDays(1));
             });
 
             await Task.WhenAll(tasks).WaitAsync(token);
@@ -93,9 +82,7 @@ public sealed class RedisCacheService : ICacheService
         }
     }
 
-    public async Task RemoveAsync(
-        string key,
-        CancellationToken token)
+    public async Task RemoveAsync(string key, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Cache key cannot be empty.", nameof(key)); ;
@@ -106,15 +93,11 @@ public sealed class RedisCacheService : ICacheService
             .WaitAsync(token);
     }
 
-    public async Task RemoveDependenciesAsync(
-        string dependency,
-        CancellationToken token)
+    public async Task RemoveDependenciesAsync(string dependency, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(dependency))
         {
-            throw new ArgumentException(
-                "Cache dependency cannot be empty.",
-                nameof(dependency));
+            throw new ArgumentException("Cache dependency cannot be empty.", nameof(dependency));
         }
 
         token.ThrowIfCancellationRequested();

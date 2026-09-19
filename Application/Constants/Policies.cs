@@ -2,7 +2,6 @@ namespace Application.Constants;
 
 public static class Policies
 {
-    public const string ViewAttributeLibrary = nameof(ViewAttributeLibrary);
     public const string ManageAttributeLibrary = nameof(ManageAttributeLibrary);
     public const string ManageSystemAttributes = nameof(ManageSystemAttributes);
 
@@ -18,4 +17,6 @@ public static class Policies
 
     public const string ManagePositions = nameof(ManagePositions);
     public const string ParticipateInDiscussions = nameof(ParticipateInDiscussions);
+
+    public const string ManageUsers = nameof(ManageUsers);
 }

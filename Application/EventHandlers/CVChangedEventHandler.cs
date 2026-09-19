@@ -4,8 +4,7 @@ using MediatR;
 
 namespace Application.EventHandlers;
 
-public sealed class CVChangedEventHandler
-    : INotificationHandler<CVChangedEvent>
+public sealed class CVChangedEventHandler : INotificationHandler<CVChangedEvent>
 {
     private readonly ICacheService _cache;
 
@@ -14,20 +13,12 @@ public sealed class CVChangedEventHandler
         _cache = cache;
     }
 
-    public async Task Handle(
-        CVChangedEvent notification,
-        CancellationToken cancellationToken)
+    public async Task Handle(CVChangedEvent notification, CancellationToken cancellationToken)
     {
-        await _cache.RemoveDependenciesAsync(
-            $"cv:{notification.CVId}",
-            cancellationToken);
+        await _cache.RemoveDependenciesAsync($"cv:{notification.CVId}", cancellationToken);
 
-        await _cache.RemoveDependenciesAsync(
-            $"profile:{notification.ProfileId}",
-            cancellationToken);
+        await _cache.RemoveDependenciesAsync($"profile:{notification.ProfileId}", cancellationToken);
 
-        await _cache.RemoveDependenciesAsync(
-            $"position:{notification.PositionId}",
-            cancellationToken);
+        await _cache.RemoveDependenciesAsync($"position:{notification.PositionId}", cancellationToken);
     }
 }

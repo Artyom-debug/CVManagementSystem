@@ -1,6 +1,8 @@
 using Application.Interfaces;
 using Domain.Abstractions;
 using Domain.Entities;
+using Infrastructure.Entities;
+using Infrastructure.Services.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -8,13 +10,11 @@ using MediatR;
 
 namespace Infrastructure.Data;
 
-public sealed class ApplicationDbContext : IdentityDbContext<IdentityUser>, IApplicationDbContext
+public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplicationDbContext
 {
     private readonly IPublisher _publisher;
 
-    public ApplicationDbContext(
-        DbContextOptions<ApplicationDbContext> options,
-        IPublisher publisher)
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IPublisher publisher)
         : base(options)
     {
         _publisher = publisher;
@@ -41,6 +41,8 @@ public sealed class ApplicationDbContext : IdentityDbContext<IdentityUser>, IApp
     public DbSet<Project> Projects => Set<Project>();
 
     public DbSet<Domain.Value_Objects.Tag> Tags => Set<Domain.Value_Objects.Tag>();
+
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     public void SetOriginalVersion(BaseEntity entity, int version)
     {
@@ -74,16 +76,6 @@ public sealed class ApplicationDbContext : IdentityDbContext<IdentityUser>, IApp
         return result;
     }
 
-    protected override void OnModelCreating(ModelBuilder builder)
-    {
-        base.OnModelCreating(builder);
-
-        builder.HasPostgresExtension("pg_trgm");
-
-        builder.ApplyConfigurationsFromAssembly(
-            typeof(ApplicationDbContext).Assembly);
-    }
-
     private void UpdateEntityVersions()
     {
         ChangeTracker.DetectChanges();
@@ -98,9 +90,7 @@ public sealed class ApplicationDbContext : IdentityDbContext<IdentityUser>, IApp
             .ToHashSet();
 
         var affectedAttributeEntries = ChangeTracker.Entries<Domain.Entities.Attribute>()
-            .Where(entry =>
-                changedAttributeIds.Contains(entry.Entity.Id) &&
-                entry.State is EntityState.Unchanged or EntityState.Modified)
+            .Where(entry => changedAttributeIds.Contains(entry.Entity.Id) && entry.State is EntityState.Unchanged or EntityState.Modified)
             .Where(entry => entriesToVersion.All(existing => !ReferenceEquals(existing.Entity, entry.Entity)));
 
         entriesToVersion.AddRange(affectedAttributeEntries);
@@ -111,5 +101,14 @@ public sealed class ApplicationDbContext : IdentityDbContext<IdentityUser>, IApp
             versionProperty.CurrentValue = (int)versionProperty.OriginalValue! + 1;
             versionProperty.IsModified = true;
         }
+    }
+
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+
+        builder.HasPostgresExtension("pg_trgm");
+
+        builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
     }
 }

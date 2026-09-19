@@ -8,12 +8,9 @@ using PositionEntity = Domain.Entities.Position;
 
 namespace Application.Commands.Position;
 
-public sealed record DuplicatePositionCommand(
-    Guid SourcePositionId,
-    string Name) : IRequest<Result>;
+public sealed record DuplicatePositionCommand(Guid SourcePositionId, string Name) : IRequest<Result>;
 
-public sealed class DuplicatePositionCommandValidator
-    : AbstractValidator<DuplicatePositionCommand>
+public sealed class DuplicatePositionCommandValidator : AbstractValidator<DuplicatePositionCommand>
 {
     public DuplicatePositionCommandValidator()
     {
@@ -24,8 +21,7 @@ public sealed class DuplicatePositionCommandValidator
     }
 }
 
-internal sealed class DuplicatePositionCommandHandler
-    : IRequestHandler<DuplicatePositionCommand, Result>
+internal sealed class DuplicatePositionCommandHandler : IRequestHandler<DuplicatePositionCommand, Result>
 {
     private readonly IApplicationDbContext _context;
 
@@ -34,31 +30,22 @@ internal sealed class DuplicatePositionCommandHandler
         _context = context;
     }
 
-    public async Task<Result> Handle(
-        DuplicatePositionCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(DuplicatePositionCommand request, CancellationToken cancellationToken)
     {
         var source = await _context.Positions
             .Include(position => position.PositionAttributes)
             .Include(position => position.Tags)
             .Include(position => position.AccessRules)
-            .SingleOrDefaultAsync(
-                position => position.Id == request.SourcePositionId,
-                cancellationToken);
+            .SingleOrDefaultAsync(position => position.Id == request.SourcePositionId, cancellationToken);
 
         if (source is null)
             return Result.Failure("Source position was not found.");
 
-        var duplicate = new PositionEntity(
-            request.Name.Trim(),
-            source.Description ?? string.Empty,
-            source.MaxProjectCount);
+        var duplicate = new PositionEntity(request.Name.Trim(), source.Description ?? string.Empty, source.MaxProjectCount);
 
         foreach (var attribute in source.PositionAttributes.OrderBy(attribute => attribute.DisplayOrder))
         {
-            duplicate.AddPositionAttribute(
-                attribute.AttributeId,
-                attribute.DisplayOrder);
+            duplicate.AddPositionAttribute(attribute.AttributeId, attribute.DisplayOrder);
         }
 
         if (source.Tags.Count > 0)

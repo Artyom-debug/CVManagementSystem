@@ -10,13 +10,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Commands.CV;
 
-public sealed record SaveCVAttributeValuesCommand(
-    Guid CVId,
-    int ProfileVersion,
-    IReadOnlyCollection<AttributeValueDto> Values) : IRequest<Result>;
+public sealed record SaveCVAttributeValuesCommand(Guid CVId, int ProfileVersion, IReadOnlyCollection<AttributeValueDto> Values) : IRequest<Result>;
 
-public sealed class SaveCVAttributeValuesCommandValidator
-    : AbstractValidator<SaveCVAttributeValuesCommand>
+public sealed class SaveCVAttributeValuesCommandValidator : AbstractValidator<SaveCVAttributeValuesCommand>
 {
     public SaveCVAttributeValuesCommandValidator()
     {
@@ -25,8 +21,7 @@ public sealed class SaveCVAttributeValuesCommandValidator
 
         RuleFor(command => command.Values)
             .NotEmpty()
-            .Must(values => values is null ||
-                values.Select(value => value.AttributeId).Distinct().Count() == values.Count)
+            .Must(values => values is null || values.Select(value => value.AttributeId).Distinct().Count() == values.Count)
             .WithMessage("Attribute ids must be unique.");
 
         RuleForEach(command => command.Values)
@@ -37,30 +32,23 @@ public sealed class SaveCVAttributeValuesCommandValidator
     }
 }
 
-internal sealed class SaveCVAttributeValuesCommandHandler
-    : IRequestHandler<SaveCVAttributeValuesCommand, Result>
+internal sealed class SaveCVAttributeValuesCommandHandler : IRequestHandler<SaveCVAttributeValuesCommand, Result>
 {
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
 
-    public SaveCVAttributeValuesCommandHandler(
-        IApplicationDbContext context,
-        IUser user)
+    public SaveCVAttributeValuesCommandHandler(IApplicationDbContext context, IUser user)
     {
         _context = context;
         _user = user;
     }
 
-    public async Task<Result> Handle(
-        SaveCVAttributeValuesCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(SaveCVAttributeValuesCommand request, CancellationToken cancellationToken)
     {
         var cv = await _context.CVs
             .Include(cv => cv.Profile)
                 .ThenInclude(profile => profile!.AttributeValues)
-            .SingleOrDefaultAsync(
-                cv => cv.Id == request.CVId,
-                cancellationToken);
+            .SingleOrDefaultAsync(cv => cv.Id == request.CVId, cancellationToken);
 
         if (cv is null)
             return Result.Failure("CV was not found.");
@@ -81,9 +69,7 @@ internal sealed class SaveCVAttributeValuesCommandHandler
 
         var positionAttributeIds = await _context.PositionAttributes
             .AsNoTracking()
-            .Where(positionAttribute =>
-                positionAttribute.PositionId == cv.PositionId &&
-                attributeIds.Contains(positionAttribute.AttributeId))
+            .Where(positionAttribute => positionAttribute.PositionId == cv.PositionId && attributeIds.Contains(positionAttribute.AttributeId))
             .Select(positionAttribute => positionAttribute.AttributeId)
             .ToHashSetAsync(cancellationToken);
 
@@ -117,8 +103,7 @@ internal sealed class SaveCVAttributeValuesCommandHandler
                 value is Guid optionId &&
                 attribute.Options.All(option => option.Id != optionId))
             {
-                return Result.Failure(
-                    $"Selected option does not belong to attribute '{attribute.Name}'.");
+                return Result.Failure($"Selected option does not belong to attribute '{attribute.Name}'.");
             }
 
             valuesToSave.Add((attribute, value));
@@ -137,11 +122,7 @@ internal sealed class SaveCVAttributeValuesCommandHandler
                 ? currentValue.Order
                 : nextOrder++;
 
-            profile.SetAttributeValue(
-                item.Attribute.Id,
-                item.Value,
-                item.Attribute.Type,
-                order);
+            profile.SetAttributeValue(item.Attribute.Id, item.Value, item.Attribute.Type, order);
         }
 
         profile.AddDomainEvent(new ProfileChangedEvent(profile.Id));

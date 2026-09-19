@@ -8,14 +8,5 @@ using Domain.Enums;
 
 namespace Application.Dtos;
 
-public sealed record DetailedAttributeDto(
-    Guid Id,
-    int Version,
-    string Name,
-    string Description,
-    AttributeType Type,
-    Category Category,
-    bool IsSystem,
-    IReadOnlyList<AttributeOptionDto> Options);
+public sealed record DetailedAttributeDto(Guid Id, int Version, string Name, string Description, AttributeType Type, Category Category, bool IsSystem, IReadOnlyList<AttributeOptionDto> Options);
 
-public sealed record AttributeOptionDto(Guid Id, string Value);

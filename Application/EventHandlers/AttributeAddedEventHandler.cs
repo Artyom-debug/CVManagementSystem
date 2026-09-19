@@ -4,8 +4,7 @@ using MediatR;
 
 namespace Application.EventHandlers;
 
-public sealed class AttributeAddedEventHandler
-    : INotificationHandler<AttributeAddedEvent>
+public sealed class AttributeAddedEventHandler : INotificationHandler<AttributeAddedEvent>
 {
     private readonly ICacheService _cache;
 
@@ -14,12 +13,8 @@ public sealed class AttributeAddedEventHandler
         _cache = cache;
     }
 
-    public Task Handle(
-        AttributeAddedEvent notification,
-        CancellationToken cancellationToken)
+    public Task Handle(AttributeAddedEvent notification, CancellationToken cancellationToken)
     {
-        return _cache.RemoveDependenciesAsync(
-            "attribute-library",
-            cancellationToken);
+        return _cache.RemoveDependenciesAsync("attribute-library", cancellationToken);
     }
 }

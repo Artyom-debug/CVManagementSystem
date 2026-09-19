@@ -10,13 +10,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Commands.Profile;
 
-public sealed record CompleteInitialProfileCommand(
-    Guid ProfileId,
-    IReadOnlyCollection<AttributeValueDto> Values,
-    int Version) : IRequest<Result>;
+public sealed record CompleteInitialProfileCommand(Guid ProfileId, IReadOnlyCollection<AttributeValueDto> Values, int Version) : IRequest<Result>;
 
-public sealed class CompleteInitialProfileCommandValidator
-    : AbstractValidator<CompleteInitialProfileCommand>
+public sealed class CompleteInitialProfileCommandValidator : AbstractValidator<CompleteInitialProfileCommand>
 {
     public CompleteInitialProfileCommandValidator()
     {
@@ -31,34 +27,27 @@ public sealed class CompleteInitialProfileCommandValidator
             .SetValidator(new AttributeValueDtoValidator());
 
         RuleFor(command => command.Values)
-            .Must(values => values is null ||
-                values.Select(value => value.AttributeId).Distinct().Count() == values.Count)
+            .Must(values => values is null || values.Select(value => value.AttributeId).Distinct().Count() == values.Count)
             .WithMessage("Attribute ids must be unique.");
 
         RuleFor(command => command.Values)
-            .Must(values => values is null ||
-                values.Select(value => value.Order).Distinct().Count() == values.Count)
+            .Must(values => values is null || values.Select(value => value.Order).Distinct().Count() == values.Count)
             .WithMessage("Attribute orders must be unique.");
     }
 }
 
-internal sealed class CompleteInitialProfileCommandHandler
-    : IRequestHandler<CompleteInitialProfileCommand, Result>
+internal sealed class CompleteInitialProfileCommandHandler : IRequestHandler<CompleteInitialProfileCommand, Result>
 {
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
 
-    public CompleteInitialProfileCommandHandler(
-        IApplicationDbContext context,
-        IUser user)
+    public CompleteInitialProfileCommandHandler(IApplicationDbContext context, IUser user)
     {
         _context = context;
         _user = user;
     }
 
-    public async Task<Result> Handle(
-        CompleteInitialProfileCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(CompleteInitialProfileCommand request, CancellationToken cancellationToken)
     {
         var profile = await _context.Profiles
             .Include(item => item.AttributeValues)
@@ -96,8 +85,7 @@ internal sealed class CompleteInitialProfileCommandHandler
 
         if (missingAttributes.Length > 0)
         {
-            return Result.Failure(missingAttributes.Select(name =>
-                $"System attribute '{name}' is required."));
+            return Result.Failure(missingAttributes.Select(name => $"System attribute '{name}' is required."));
         }
 
         foreach (var attribute in systemAttributes)
@@ -109,11 +97,7 @@ internal sealed class CompleteInitialProfileCommandHandler
             if (error is not null)
                 return Result.Failure(error);
 
-            profile.SetAttributeValue(
-                attribute.Id,
-                value,
-                attribute.Type,
-                valueDto.Order);
+            profile.SetAttributeValue(attribute.Id, value, attribute.Type, valueDto.Order);
         }
 
         profile.AddDomainEvent(new ProfileChangedEvent(profile.Id));
@@ -131,9 +115,7 @@ internal sealed class CompleteInitialProfileCommandHandler
         return Result.Success(profile.Version);
     }
 
-    private static string? ValidateRequiredValue(
-        Domain.Entities.Attribute attribute,
-        object? value)
+    private static string? ValidateRequiredValue(Domain.Entities.Attribute attribute, object? value)
     {
         if (value is null || value is string text && string.IsNullOrWhiteSpace(text))
             return $"System attribute '{attribute.Name}' is required.";

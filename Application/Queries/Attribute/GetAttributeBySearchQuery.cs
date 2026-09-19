@@ -7,11 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Queries.Attribute;
 
-public sealed record GetAttributeBySearchQuery(
-    string Search) : IRequest<IReadOnlyList<AttributeDto>>;
+public sealed record GetAttributeBySearchQuery(string Search) : IRequest<IReadOnlyList<AttributeDto>>;
 
-public sealed class GetAttributeBySearchQueryValidator
-    : AbstractValidator<GetAttributeBySearchQuery>
+public sealed class GetAttributeBySearchQueryValidator : AbstractValidator<GetAttributeBySearchQuery>
 {
     public GetAttributeBySearchQueryValidator()
     {
@@ -22,8 +20,7 @@ public sealed class GetAttributeBySearchQueryValidator
     }
 }
 
-internal sealed class GetAttributeBySearchQueryHandler
-    : IRequestHandler<GetAttributeBySearchQuery, IReadOnlyList<AttributeDto>>
+internal sealed class GetAttributeBySearchQueryHandler : IRequestHandler<GetAttributeBySearchQuery, IReadOnlyList<AttributeDto>>
 {
     private readonly IApplicationDbContext _context;
 
@@ -32,25 +29,15 @@ internal sealed class GetAttributeBySearchQueryHandler
         _context = context;
     }
 
-    public async Task<IReadOnlyList<AttributeDto>> Handle(
-        GetAttributeBySearchQuery request,
-        CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<AttributeDto>> Handle(GetAttributeBySearchQuery request, CancellationToken cancellationToken)
     {
         var search = request.Search.Trim().ToUpperInvariant();
 
         return await _context.Attributes
             .AsNoTracking()
-            .Where(attribute =>
-                attribute.Name.StartsWith(search) ||
-                EF.Functions.TrigramsAreSimilar(attribute.Name, search))
+            .Where(attribute => attribute.Name.StartsWith(search) || EF.Functions.TrigramsAreSimilar(attribute.Name, search))
             .OrderBy(attribute => attribute.Name)
-            .Select(attribute => new AttributeDto(
-                attribute.Id,
-                attribute.Version,
-                attribute.Name,
-                attribute.Type,
-                attribute.Category,
-                attribute.IsSystem))
+            .Select(attribute => new AttributeDto(attribute.Id, attribute.Version, attribute.Name, attribute.Type, attribute.Category, attribute.IsSystem))
             .ToListAsync(cancellationToken);
     }
 }

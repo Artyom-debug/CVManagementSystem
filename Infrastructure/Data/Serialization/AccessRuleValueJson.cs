@@ -14,9 +14,7 @@ internal static class AccessRuleValueJson
     };
 
     public static ValueConverter<AccessRuleValue, string> CreateConverter() =>
-        new(
-            value => Serialize(value),
-            json => Deserialize(json));
+        new(value => Serialize(value), json => Deserialize(json));
 
     private static string Serialize(AccessRuleValue value)
     {

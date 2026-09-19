@@ -3,20 +3,9 @@ using Domain.Value_Objects;
 
 namespace Application.Commands.Position;
 
-public sealed record PositionAttributeInput(
-    Guid AttributeId,
-    int DisplayOrder);
+public sealed record PositionAttributeInput(Guid AttributeId, int DisplayOrder);
 
-public sealed record PositionAccessRuleInput(
-    Guid AttributeId,
-    Operator Operator,
-    string? StringValue = null,
-    double? NumericValue = null,
-    DateOnly? DateValue = null,
-    DateOnly? PeriodStart = null,
-    DateOnly? PeriodEnd = null,
-    bool? BooleanValue = null,
-    Guid? DropdownOptionId = null);
+public sealed record PositionAccessRuleInput(Guid AttributeId, Operator Operator, string? StringValue = null, double? NumericValue = null, DateOnly? DateValue = null, DateOnly? PeriodStart = null, DateOnly? PeriodEnd = null, bool? BooleanValue = null, Guid? DropdownOptionId = null);
 
 internal static class PositionCommandModels
 {
@@ -25,48 +14,23 @@ internal static class PositionCommandModels
         return rule.AttributeType switch
         {
             AttributeType.String or AttributeType.Text or AttributeType.Image =>
-                AccessRule.ForString(
-                    rule.AttributeId,
-                    rule.AttributeType,
-                    rule.Operator,
-                    rule.Value.StringValue!),
+                AccessRule.ForString(rule.AttributeId, rule.AttributeType, rule.Operator, rule.Value.StringValue!),
 
-            AttributeType.Numeric => AccessRule.ForNumeric(
-                rule.AttributeId,
-                rule.Operator,
-                rule.Value.NumericValue!.Value),
+            AttributeType.Numeric => AccessRule.ForNumeric(rule.AttributeId, rule.Operator, rule.Value.NumericValue!.Value),
 
-            AttributeType.Date => AccessRule.ForDate(
-                rule.AttributeId,
-                rule.Operator,
-                rule.Value.DateValue!.Value),
+            AttributeType.Date => AccessRule.ForDate(rule.AttributeId, rule.Operator, rule.Value.DateValue!.Value),
 
-            AttributeType.Period => AccessRule.ForPeriod(
-                rule.AttributeId,
-                rule.Operator,
-                rule.Value.PeriodEnd.HasValue
-                    ? new Period(rule.Value.PeriodStart!.Value, rule.Value.PeriodEnd.Value)
-                    : new Period(rule.Value.PeriodStart!.Value)),
+            AttributeType.Period => AccessRule.ForPeriod(rule.AttributeId, rule.Operator, rule.Value.PeriodEnd.HasValue ? new Period(rule.Value.PeriodStart!.Value, rule.Value.PeriodEnd.Value) : new Period(rule.Value.PeriodStart!.Value)),
 
-            AttributeType.Checkbox => AccessRule.ForBoolean(
-                rule.AttributeId,
-                rule.Operator,
-                rule.Value.BooleanValue!.Value),
+            AttributeType.Checkbox => AccessRule.ForBoolean(rule.AttributeId, rule.Operator, rule.Value.BooleanValue!.Value),
 
-            AttributeType.Dropdown => AccessRule.ForDropdown(
-                rule.AttributeId,
-                rule.Operator,
-                rule.Value.DropdownOptionId!.Value),
+            AttributeType.Dropdown => AccessRule.ForDropdown(rule.AttributeId, rule.Operator, rule.Value.DropdownOptionId!.Value),
 
             _ => throw new ArgumentOutOfRangeException(nameof(rule.AttributeType))
         };
     }
 
-    public static bool TryCreateAccessRules(
-        IReadOnlyCollection<PositionAccessRuleInput> inputs,
-        IReadOnlyDictionary<Guid, Domain.Entities.Attribute> attributes,
-        out IReadOnlyCollection<AccessRule> rules,
-        out string? error)
+    public static bool TryCreateAccessRules(IReadOnlyCollection<PositionAccessRuleInput> inputs, IReadOnlyDictionary<Guid, Domain.Entities.Attribute> attributes, out IReadOnlyCollection<AccessRule> rules, out string? error)
     {
         var result = new List<AccessRule>();
 
@@ -97,55 +61,28 @@ internal static class PositionCommandModels
         return true;
     }
 
-    private static AccessRule CreateAccessRule(
-        PositionAccessRuleInput input,
-        Domain.Entities.Attribute attribute)
+    private static AccessRule CreateAccessRule(PositionAccessRuleInput input, Domain.Entities.Attribute attribute)
     {
         return attribute.Type switch
         {
             AttributeType.String or AttributeType.Text or AttributeType.Image =>
-                AccessRule.ForString(
-                    attribute.Id,
-                    attribute.Type,
-                    input.Operator,
-                    input.StringValue
-                        ?? throw new ArgumentException($"Value for attribute '{attribute.Name}' is required.")),
+                AccessRule.ForString(attribute.Id, attribute.Type, input.Operator, input.StringValue ?? throw new ArgumentException($"Value for attribute '{attribute.Name}' is required.")),
 
-            AttributeType.Numeric => AccessRule.ForNumeric(
-                attribute.Id,
-                input.Operator,
-                input.NumericValue
-                    ?? throw new ArgumentException($"Value for attribute '{attribute.Name}' is required.")),
+            AttributeType.Numeric => AccessRule.ForNumeric(attribute.Id, input.Operator, input.NumericValue ?? throw new ArgumentException($"Value for attribute '{attribute.Name}' is required.")),
 
-            AttributeType.Date => AccessRule.ForDate(
-                attribute.Id,
-                input.Operator,
-                input.DateValue
-                    ?? throw new ArgumentException($"Value for attribute '{attribute.Name}' is required.")),
+            AttributeType.Date => AccessRule.ForDate(attribute.Id, input.Operator, input.DateValue ?? throw new ArgumentException($"Value for attribute '{attribute.Name}' is required.")),
 
-            AttributeType.Period => AccessRule.ForPeriod(
-                attribute.Id,
-                input.Operator,
-                CreatePeriod(input, attribute.Name)),
+            AttributeType.Period => AccessRule.ForPeriod(attribute.Id, input.Operator, CreatePeriod(input, attribute.Name)),
 
-            AttributeType.Checkbox => AccessRule.ForBoolean(
-                attribute.Id,
-                input.Operator,
-                input.BooleanValue
-                    ?? throw new ArgumentException($"Value for attribute '{attribute.Name}' is required.")),
+            AttributeType.Checkbox => AccessRule.ForBoolean(attribute.Id, input.Operator, input.BooleanValue ?? throw new ArgumentException($"Value for attribute '{attribute.Name}' is required.")),
 
-            AttributeType.Dropdown => AccessRule.ForDropdown(
-                attribute.Id,
-                input.Operator,
-                GetDropdownOptionId(input, attribute)),
+            AttributeType.Dropdown => AccessRule.ForDropdown(attribute.Id, input.Operator, GetDropdownOptionId(input, attribute)),
 
             _ => throw new ArgumentOutOfRangeException(nameof(attribute.Type))
         };
     }
 
-    private static Period CreatePeriod(
-        PositionAccessRuleInput input,
-        string attributeName)
+    private static Period CreatePeriod(PositionAccessRuleInput input, string attributeName)
     {
         var start = input.PeriodStart
             ?? throw new ArgumentException($"Period start for attribute '{attributeName}' is required.");
@@ -155,17 +92,14 @@ internal static class PositionCommandModels
             : new Period(start);
     }
 
-    private static Guid GetDropdownOptionId(
-        PositionAccessRuleInput input,
-        Domain.Entities.Attribute attribute)
+    private static Guid GetDropdownOptionId(PositionAccessRuleInput input, Domain.Entities.Attribute attribute)
     {
         var optionId = input.DropdownOptionId
             ?? throw new ArgumentException($"Dropdown option for attribute '{attribute.Name}' is required.");
 
         if (attribute.Options.All(option => option.Id != optionId))
         {
-            throw new ArgumentException(
-                $"Selected option does not belong to attribute '{attribute.Name}'.");
+            throw new ArgumentException($"Selected option does not belong to attribute '{attribute.Name}'.");
         }
 
         return optionId;

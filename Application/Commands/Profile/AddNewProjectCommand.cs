@@ -9,17 +9,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Commands.Profile;
 
-public sealed record AddNewProjectCommand(
-    Guid ProfileId,
-    int Version,
-    string Name,
-    string? Description,
-    DateOnly StartDate,
-    DateOnly? EndDate,
-    IReadOnlyCollection<string>? Tags) : IRequest<Result>;
+public sealed record AddNewProjectCommand(Guid ProfileId, int Version, string Name, string? Description, DateOnly StartDate, DateOnly? EndDate, IReadOnlyCollection<string>? Tags) : IRequest<Result>;
 
-public sealed class AddNewProjectCommandValidator
-    : AbstractValidator<AddNewProjectCommand>
+public sealed class AddNewProjectCommandValidator : AbstractValidator<AddNewProjectCommand>
 {
     public AddNewProjectCommandValidator()
     {
@@ -52,28 +44,21 @@ public sealed class AddNewProjectCommandValidator
             .Count() == tags.Count(tag => !string.IsNullOrWhiteSpace(tag));
 }
 
-internal sealed class AddNewProjectCommandHandler
-    : IRequestHandler<AddNewProjectCommand, Result>
+internal sealed class AddNewProjectCommandHandler : IRequestHandler<AddNewProjectCommand, Result>
 {
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
 
-    public AddNewProjectCommandHandler(
-        IApplicationDbContext context,
-        IUser user)
+    public AddNewProjectCommandHandler(IApplicationDbContext context, IUser user)
     {
         _context = context;
         _user = user;
     }
 
-    public async Task<Result> Handle(
-        AddNewProjectCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(AddNewProjectCommand request, CancellationToken cancellationToken)
     {
         var profile = await _context.Profiles
-            .SingleOrDefaultAsync(
-                profile => profile.Id == request.ProfileId,
-                cancellationToken);
+            .SingleOrDefaultAsync(profile => profile.Id == request.ProfileId, cancellationToken);
 
         if (profile is null)
             return Result.Failure("Profile was not found.");
@@ -99,11 +84,7 @@ internal sealed class AddNewProjectCommandHandler
         if (tags.Count != requestedTagNames.Count)
             return Result.Failure("One or more selected tags do not exist.");
 
-        profile.AddNewProject(
-            request.Name.Trim(),
-            request.Description,
-            period,
-            tags);
+        profile.AddNewProject(request.Name.Trim(), request.Description, period, tags);
 
         profile.AddDomainEvent(new ProfileChangedEvent(profile.Id));
         _context.SetOriginalVersion(profile, request.Version);
