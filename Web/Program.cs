@@ -11,8 +11,6 @@ builder.Services.AddApplicationServices();
 builder.AddInfrastructureServices();
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy(Policies.ViewAttributeLibrary, policy => policy.RequireAuthenticatedUser());
-
     options.AddPolicy(Policies.ManageAttributeLibrary, policy => policy.RequireRole(Roles.Recruiter, Roles.Administrator));
 
     options.AddPolicy(Policies.ManageSystemAttributes, policy => policy.RequireRole(Roles.Administrator));
@@ -22,6 +20,8 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(Policies.ManageTagLibrary, policy => policy.RequireRole(Roles.Recruiter, Roles.Administrator));
 
     options.AddPolicy(Policies.ManageCandidateProfile, policy => policy.RequireRole(Roles.Candidate, Roles.Administrator));
+
+    options.AddPolicy(Policies.ViewFullCandidateProfile, policy => policy.RequireRole(Roles.Recruiter, Roles.Administrator));
 
     options.AddPolicy(Policies.ManageCV, policy => policy.RequireRole(Roles.Candidate, Roles.Administrator));
 

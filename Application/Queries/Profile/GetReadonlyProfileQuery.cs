@@ -79,7 +79,7 @@ internal sealed class GetReadonlyProfileQueryHandler : IRequestHandler<GetReadon
             .Distinct()
             .ToArray();
 
-        await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10), cancellationToken, dependencies);
+        await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(15), cancellationToken, dependencies);
 
         return result;
     }

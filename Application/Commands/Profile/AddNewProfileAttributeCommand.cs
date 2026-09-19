@@ -7,6 +7,7 @@ using Domain.Events;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Exceptions;
 
 namespace Application.Commands.Profile;
 
@@ -53,7 +54,7 @@ internal sealed class AddNewProfileAttributeCommandHandler : IRequestHandler<Add
                                _user.Roles?.Contains(Roles.Administrator) == true;
 
         if (!canManageProfile)
-            return Result.Failure("You do not have permission to modify this profile.");
+            throw new ForbiddenAccessException("You do not have permission to manage this profile");
 
         var attribute = await _context.Attributes
             .AsNoTracking()

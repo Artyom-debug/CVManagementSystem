@@ -7,6 +7,7 @@ using Domain.Events;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Exceptions;
 
 namespace Application.Commands.Profile;
 
@@ -50,7 +51,7 @@ internal sealed class UpdateProfileAttributeValueCommandHandler : IRequestHandle
                                _user.Roles?.Contains(Roles.Administrator) == true;
 
         if (!canManageProfile)
-            return Result.Failure("You do not have permission to modify this profile.");
+            throw new ForbiddenAccessException("You do not have permission to manage this profile");
 
         var currentValue = profile.AttributeValues
             .SingleOrDefault(value => value.AttributeId == request.Value.AttributeId);
@@ -68,18 +69,11 @@ internal sealed class UpdateProfileAttributeValueCommandHandler : IRequestHandle
 
         var value = request.Value.GetValue(attribute.Type);
 
-        if (attribute.IsSystem &&
-            (value is null || value is string text && string.IsNullOrWhiteSpace(text)))
-        {
+        if (attribute.IsSystem && (value is null || value is string text && string.IsNullOrWhiteSpace(text)))
             return Result.Failure($"System attribute '{attribute.Name}' is required.");
-        }
 
-        if (attribute.Type == AttributeType.Dropdown &&
-            value is Guid optionId &&
-            attribute.Options.All(option => option.Id != optionId))
-        {
+        if (attribute.Type == AttributeType.Dropdown && value is Guid optionId && attribute.Options.All(option => option.Id != optionId))
             return Result.Failure($"Selected option does not belong to attribute '{attribute.Name}'.");
-        }
 
         profile.SetAttributeValue(attribute.Id, value, attribute.Type, currentValue.Order);
 

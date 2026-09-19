@@ -1,3 +1,4 @@
+using Application.Common.Exceptions;
 using Application.Common.Models;
 using Application.Constants;
 using Application.Interfaces;
@@ -67,7 +68,7 @@ internal sealed class AddNewProjectCommandHandler : IRequestHandler<AddNewProjec
                                _user.Roles?.Contains(Roles.Administrator) == true;
 
         if (!canManageProfile)
-            return Result.Failure("You do not have permission to modify this profile.");
+            throw new ForbiddenAccessException("You do not have permission to manage this profile");
 
         var period = request.EndDate.HasValue
             ? new Period(request.StartDate, request.EndDate.Value)

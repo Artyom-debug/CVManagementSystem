@@ -29,13 +29,6 @@ public sealed class Profile : BaseEntity
         UpdatedAt = CreatedAt;
     }
 
-    public void DeleteProject(Guid projectId)
-    {
-        var project = FindProject(projectId);
-        _projects.Remove(project);
-        MarkUpdated();
-    }
-
     public void DeleteProjectRange(IReadOnlyCollection<Guid> projectIds)
     {
         ArgumentNullException.ThrowIfNull(projectIds);
@@ -113,21 +106,9 @@ public sealed class Profile : BaseEntity
             MarkUpdated();
     }
 
-    //public void AddProjectTag(Guid projectId, Tag tag)
-    //{
-    //    if (FindProject(projectId).AddTag(tag))
-    //        MarkUpdated();
-    //}
-
     public void AddProjectTagRange(Guid projectId, IReadOnlyCollection<Tag> tags)
     {
         if (FindProject(projectId).AddTagRange(tags))
-            MarkUpdated();
-    }
-
-    public void RemoveProjectTag(Guid projectId, string tag)
-    {
-        if (FindProject(projectId).RemoveTag(tag))
             MarkUpdated();
     }
 

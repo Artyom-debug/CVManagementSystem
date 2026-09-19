@@ -50,7 +50,36 @@ internal sealed class GetPersonalProfileQueryHandler : IRequestHandler<GetPerson
             .AsNoTracking()
             .Where(value => value.ProfileId == profile.Id)
             .OrderBy(value => value.Order)
-            .Select(value => new ProfileAttributeDto(new AttributeValueDto(value.AttributeId, value.Order, value.Attribute!.Type == AttributeType.String ? value.StringValue : value.Attribute.Type == AttributeType.Text ? value.TextValue : value.Attribute.Type == AttributeType.Image ? value.ImageValue : null, value.NumericValue, value.DateValue, value.PeriodValue, value.CheckboxValue, value.DropdownOptionId), new DetailedAttributeDto(value.Attribute.Id, value.Attribute.Version, value.Attribute.Name, value.Attribute.Description, value.Attribute.Type, value.Attribute.Category, value.Attribute.IsSystem, value.Attribute.Options.OrderBy(option => option.Option).Select(option => new AttributeOptionDto(option.Id, option.Option)).ToList())))
+            .Select(value => new ProfileAttributeDto(
+                new AttributeValueDto(
+                    value.AttributeId,
+                    value.Order,
+                    value.Attribute!.Type == AttributeType.String
+                        ? value.StringValue
+                        : value.Attribute.Type == AttributeType.Text
+                            ? value.TextValue
+                            : value.Attribute.Type == AttributeType.Image
+                                ? value.ImageValue
+                                : null,
+                    value.NumericValue,
+                    value.DateValue,
+                    value.PeriodValue,
+                    value.CheckboxValue,
+                    value.DropdownOptionId),
+                new DetailedAttributeDto(
+                    value.Attribute.Id,
+                    value.Attribute.Version,
+                    value.Attribute.Name,
+                    value.Attribute.Description,
+                    value.Attribute.Type,
+                    value.Attribute.Category,
+                    value.Attribute.IsSystem,
+                    value.Attribute.Options
+                        .OrderBy(option => option.Option)
+                        .Select(option => new AttributeOptionDto(
+                            option.Id,
+                            option.Option))
+                        .ToList())))
             .ToListAsync(cancellationToken);
 
         var projects = await _context.Projects
@@ -76,7 +105,7 @@ internal sealed class GetPersonalProfileQueryHandler : IRequestHandler<GetPerson
             .Distinct()
             .ToArray();
 
-        await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10), cancellationToken, dependencies);
+        await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(15), cancellationToken, dependencies);
 
         return result;
     }

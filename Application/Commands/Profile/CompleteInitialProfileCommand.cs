@@ -1,3 +1,4 @@
+using Application.Common.Exceptions;
 using Application.Common.Models;
 using Application.Constants;
 using Application.Dtos;
@@ -60,7 +61,7 @@ internal sealed class CompleteInitialProfileCommandHandler : IRequestHandler<Com
                                _user.Roles?.Contains(Roles.Administrator) == true;
 
         if (!canManageProfile)
-            return Result.Failure("You do not have permission to modify this profile.");
+            throw new ForbiddenAccessException("You do not have permission to manage this profile");
 
         var systemAttributes = await _context.Attributes
             .AsNoTracking()

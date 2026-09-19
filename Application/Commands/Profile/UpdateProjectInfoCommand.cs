@@ -6,6 +6,7 @@ using Domain.Value_Objects;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Exceptions;
 
 namespace Application.Commands.Profile;
 
@@ -63,7 +64,7 @@ internal sealed class UpdateProjectInfoCommandHandler : IRequestHandler<UpdatePr
                                _user.Roles?.Contains(Roles.Administrator) == true;
 
         if (!canManageProfile)
-            return Result.Failure("You do not have permission to modify this profile.");
+            throw new ForbiddenAccessException("You do not have permission to manage this profile");
 
         var project = profile.Projects
             .SingleOrDefault(project => project.Id == request.ProjectId);
@@ -90,6 +91,22 @@ internal sealed class UpdateProjectInfoCommandHandler : IRequestHandler<UpdatePr
 
         if (tagsToAdd.Count != tagNamesToAdd.Length)
             return Result.Failure("One or more selected tags do not exist.");
+
+        var oldName = project.Name;
+        var oldDescription = project.Description;
+        var oldPeriod = project.Period;
+        var oldTags = project.Tags
+            .Select(tag => tag.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var hasChanged =
+            oldName != project.Name ||
+            oldDescription != project.Description ||
+            oldPeriod != project.Period ||
+            !oldTags.SetEquals(project.Tags.Select(tag => tag.Name));
+
+        if (!hasChanged)
+            return Result.Success(profile.Version);
 
         profile.RenameProject(project.Id, request.Name.Trim());
         profile.SetProjectDescription(project.Id, request.Description);
