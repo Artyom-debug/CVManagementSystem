@@ -41,6 +41,14 @@ public sealed class ProfileController : ControllerBase
         SendCommand(command, cancellationToken);
 
     [Authorize(Policy = Policies.ManageCandidateProfile)]
+    [HttpPost("{profileId:guid}/attributes/{attributeId:guid}/image-upload-data")]
+    public async Task<ActionResult<ImageUploadData>> CreateImageUploadData(Guid profileId, Guid attributeId, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new CreateImageUploadDataCommand(profileId, attributeId), cancellationToken);
+        return Ok(result);
+    }
+
+    [Authorize(Policy = Policies.ManageCandidateProfile)]
     [HttpPost("attributes")]
     public Task<ActionResult<Result>> AddAttribute(AddNewProfileAttributeCommand command, CancellationToken cancellationToken) =>
         SendCommand(command, cancellationToken);

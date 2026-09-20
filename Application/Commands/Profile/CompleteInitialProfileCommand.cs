@@ -41,11 +41,13 @@ internal sealed class CompleteInitialProfileCommandHandler : IRequestHandler<Com
 {
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
+    private readonly IImageStorage _imageStorage;
 
-    public CompleteInitialProfileCommandHandler(IApplicationDbContext context, IUser user)
+    public CompleteInitialProfileCommandHandler(IApplicationDbContext context, IUser user, IImageStorage imageStorage)
     {
         _context = context;
         _user = user;
+        _imageStorage = imageStorage;
     }
 
     public async Task<Result> Handle(CompleteInitialProfileCommand request, CancellationToken cancellationToken)
@@ -85,9 +87,7 @@ internal sealed class CompleteInitialProfileCommandHandler : IRequestHandler<Com
             .ToArray();
 
         if (missingAttributes.Length > 0)
-        {
             return Result.Failure(missingAttributes.Select(name => $"System attribute '{name}' is required."));
-        }
 
         foreach (var attribute in systemAttributes)
         {
@@ -97,6 +97,16 @@ internal sealed class CompleteInitialProfileCommandHandler : IRequestHandler<Com
             var error = ValidateRequiredValue(attribute, value);
             if (error is not null)
                 return Result.Failure(error);
+
+            if (attribute.Type == AttributeType.Image && value is string publicId)
+            {
+                var expectedPrefix = $"profiles/{profile.Id}/attributes/{attribute.Id}/";
+                var imageExists = publicId.StartsWith(expectedPrefix, StringComparison.Ordinal) &&
+                                  await _imageStorage.ExistsAsync(publicId, cancellationToken);
+
+                if (!imageExists)
+                    return Result.Failure($"Image for attribute '{attribute.Name}' was not found.");
+            }
 
             profile.SetAttributeValue(attribute.Id, value, attribute.Type, valueDto.Order);
         }

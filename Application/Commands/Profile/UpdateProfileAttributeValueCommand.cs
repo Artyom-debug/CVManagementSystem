@@ -31,11 +31,13 @@ internal sealed class UpdateProfileAttributeValueCommandHandler : IRequestHandle
 {
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
+    private readonly IImageStorage _imageStorage;
 
-    public UpdateProfileAttributeValueCommandHandler(IApplicationDbContext context, IUser user)
+    public UpdateProfileAttributeValueCommandHandler(IApplicationDbContext context, IUser user, IImageStorage imageStorage)
     {
         _context = context;
         _user = user;
+        _imageStorage = imageStorage;
     }
 
     public async Task<Result> Handle(UpdateProfileAttributeValueCommand request, CancellationToken cancellationToken)
@@ -74,6 +76,18 @@ internal sealed class UpdateProfileAttributeValueCommandHandler : IRequestHandle
 
         if (attribute.Type == AttributeType.Dropdown && value is Guid optionId && attribute.Options.All(option => option.Id != optionId))
             return Result.Failure($"Selected option does not belong to attribute '{attribute.Name}'.");
+
+        if (attribute.Type == AttributeType.Image &&
+            value is string publicId &&
+            !string.IsNullOrWhiteSpace(publicId))
+        {
+            var expectedPrefix = $"profiles/{profile.Id}/attributes/{attribute.Id}/";
+            var imageExists = publicId.StartsWith(expectedPrefix, StringComparison.Ordinal) &&
+                              await _imageStorage.ExistsAsync(publicId, cancellationToken);
+
+            if (!imageExists)
+                return Result.Failure("The uploaded image was not found.");
+        }
 
         profile.SetAttributeValue(attribute.Id, value, attribute.Type, currentValue.Order);
 

@@ -47,11 +47,10 @@ internal sealed class CreateNewCVCommandHandler : IRequestHandler<CreateNewCVCom
         var canManageCV = profile.UserId == _user.Id || isAdministrator;
 
         if (!canManageCV)
-            return Result.Failure("You do not have permission to create a CV for this profile.");
+            return Result.Failure("You do not have permission to create a CV for this position.");
 
         var position = await _context.Positions
             .AsNoTracking()
-            .Include(position => position.AccessRules)
             .SingleOrDefaultAsync(position => position.Id == request.PositionId, cancellationToken);
 
         if (position is null)
@@ -61,8 +60,7 @@ internal sealed class CreateNewCVCommandHandler : IRequestHandler<CreateNewCVCom
         var existingCV = await _context.CVs
             .SingleOrDefaultAsync(cv => cv.ProfileId == request.ProfileId && cv.PositionId == request.PositionId, cancellationToken);
 
-        if (existingCV is not null &&
-            !existingCV.MarkedAsDeleted)
+        if (existingCV is not null && !existingCV.MarkedAsDeleted)
             return Result.Failure("A CV for this position already exists.");
 
         var cv = new Domain.Entities.CV(request.ProfileId, request.PositionId);

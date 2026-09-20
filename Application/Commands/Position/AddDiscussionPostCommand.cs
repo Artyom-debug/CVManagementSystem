@@ -33,8 +33,7 @@ internal sealed class AddDiscussionPostCommandHandler : IRequestHandler<AddDiscu
 
     public async Task<Result> Handle(AddDiscussionPostCommand request, CancellationToken cancellationToken)
     {
-        var userId = _user.Id
-            ?? throw new UnauthorizedAccessException("User is not authenticated.");
+        var userId = _user.Id ?? throw new UnauthorizedAccessException("User is not authenticated.");
 
         var position = await _context.Positions
             .Include(position => position.DiscussionPosts)

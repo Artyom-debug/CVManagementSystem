@@ -32,13 +32,14 @@ internal sealed class AddNewProfileAttributeCommandHandler : IRequestHandler<Add
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
     private readonly IRecentAttributesCache _recentAttributesCache;
+    private readonly IImageStorage _imageStorage;
 
-    public AddNewProfileAttributeCommandHandler(IApplicationDbContext context, IUser user, IRecentAttributesCache recentAttributesCache)
+    public AddNewProfileAttributeCommandHandler(IApplicationDbContext context, IUser user, IRecentAttributesCache recentAttributesCache, IImageStorage imageStorage)
     {
         _context = context;
         _user = user;
         _recentAttributesCache = recentAttributesCache;
-
+        _imageStorage = imageStorage;
     }
 
     public async Task<Result> Handle(AddNewProfileAttributeCommand request, CancellationToken cancellationToken)
@@ -72,11 +73,17 @@ internal sealed class AddNewProfileAttributeCommandHandler : IRequestHandler<Add
 
         var value = request.Value.GetValue(attribute.Type);
 
-        if (attribute.Type == AttributeType.Dropdown &&
-            value is Guid optionId &&
-            attribute.Options.All(option => option.Id != optionId))
-        {
+        if (attribute.Type == AttributeType.Dropdown && value is Guid optionId && attribute.Options.All(option => option.Id != optionId))
             return Result.Failure($"Selected option does not belong to attribute '{attribute.Name}'.");
+
+        if (attribute.Type == AttributeType.Image && value is string publicId && !string.IsNullOrWhiteSpace(publicId))
+        {
+            var expectedPrefix = $"profiles/{profile.Id}/attributes/{attribute.Id}/";
+            var imageExists = publicId.StartsWith(expectedPrefix, StringComparison.Ordinal) &&
+                              await _imageStorage.ExistsAsync(publicId, cancellationToken);
+
+            if (!imageExists)
+                return Result.Failure("The uploaded image was not found.");
         }
 
         profile.SetAttributeValue(attribute.Id, value, attribute.Type, request.Value.Order);

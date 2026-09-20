@@ -3,6 +3,7 @@ using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Infrastructure.Models;
 using Application.Interfaces;
+using Microsoft.Extensions.Options;
 
 
 namespace Infrastructure.Services;
@@ -12,10 +13,10 @@ public sealed class ImageStorage : IImageStorage
     private readonly Cloudinary _cloudinary;
     private readonly CloudinaryOptions _cloudinaryOptions;
 
-    public ImageStorage(Cloudinary cloudinary, CloudinaryOptions cloudinaryOptions)
+    public ImageStorage(Cloudinary cloudinary, IOptions<CloudinaryOptions> cloudinaryOptions)
     {
         _cloudinary = cloudinary;
-        _cloudinaryOptions = cloudinaryOptions;
+        _cloudinaryOptions = cloudinaryOptions.Value;
     }
 
     public ImageUploadData CreateUploadData(Guid profileId, Guid attributeId)

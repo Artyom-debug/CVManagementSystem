@@ -31,8 +31,7 @@ internal sealed class AddCVLikeCommandHandler : IRequestHandler<AddCVLikeCommand
 
     public async Task<Result> Handle(AddCVLikeCommand request, CancellationToken cancellationToken)
     {
-        var recruiterId = _user.Id
-            ?? throw new UnauthorizedAccessException("User is not authenticated.");
+        var recruiterId = _user.Id ?? throw new UnauthorizedAccessException("User is not authenticated.");
 
         var cv = await _context.CVs
             .Include(cv => cv.Likes)
@@ -56,12 +55,7 @@ internal sealed class AddCVLikeCommandHandler : IRequestHandler<AddCVLikeCommand
         }
         catch (DbUpdateException)
         {
-            var likeAlreadyExists = await _context.Likes
-                .AsNoTracking()
-                .AnyAsync(like => like.CVId == cv.Id && like.RecruterId == recruiterId, cancellationToken);
-
-            if (!likeAlreadyExists)
-                throw;
+            return Result.Failure("Failed to like this CV");
         }
 
         return Result.Success();

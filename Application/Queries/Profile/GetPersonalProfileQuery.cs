@@ -14,12 +14,14 @@ internal sealed class GetPersonalProfileQueryHandler : IRequestHandler<GetPerson
     private readonly IApplicationDbContext _context;
     private readonly IUser _user;
     private readonly ICacheService _cache;
+    private readonly IImageStorage _imageStorage;
 
-    public GetPersonalProfileQueryHandler(IApplicationDbContext context, IUser user, ICacheService cache)
+    public GetPersonalProfileQueryHandler(IApplicationDbContext context, IUser user, ICacheService cache, IImageStorage imageStorage)
     {
         _context = context;
         _user = user;
         _cache = cache;
+        _imageStorage = imageStorage;
     }
 
     public async Task<ProfileDto> Handle(GetPersonalProfileQuery request, CancellationToken cancellationToken)
@@ -27,7 +29,7 @@ internal sealed class GetPersonalProfileQueryHandler : IRequestHandler<GetPerson
         if (string.IsNullOrWhiteSpace(_user.Id))
             throw new UnauthorizedAccessException("User is not authenticated.");
 
-        var cacheKey = $"profile-personal:v1:user:{_user.Id}";
+        var cacheKey = $"profile-personal:v2:user:{_user.Id}";
         var cachedProfile = await _cache.GetAsync<ProfileDto>(cacheKey, cancellationToken);
 
         if (cachedProfile is not null)
@@ -82,6 +84,28 @@ internal sealed class GetPersonalProfileQueryHandler : IRequestHandler<GetPerson
                         .ToList())))
             .ToListAsync(cancellationToken);
 
+        attributes = attributes
+            .Select(attribute =>
+            {
+                var value = attribute.Value;
+
+                if (attribute.Attribute.Type != AttributeType.Image ||
+                    value.StringValue is not string publicId ||
+                    string.IsNullOrWhiteSpace(publicId))
+                {
+                    return attribute;
+                }
+
+                return attribute with
+                {
+                    Value = value with
+                    {
+                        StringValue = _imageStorage.CreateUrl(publicId)
+                    }
+                };
+            })
+            .ToList();
+
         var projects = await _context.Projects
             .AsNoTracking()
             .Where(project => project.ProfileId == profile.Id)
@@ -93,7 +117,7 @@ internal sealed class GetPersonalProfileQueryHandler : IRequestHandler<GetPerson
             .AsNoTracking()
             .Where(cv => cv.ProfileId == profile.Id && cv.Status != Status.Deleted)
             .OrderByDescending(cv => cv.CreatedAt)
-            .Select(cv => new CVDto(cv.Id, cv.PositionId, cv.Position!.Name, cv.Status, cv.CreatedAt, cv.LastUpdated, cv.PublishedAt))
+            .Select(cv => new CVDto(cv.Id, cv.PositionId, cv.Position!.Name, cv.Status, cv.CreatedAt, cv.PublishedAt))
             .ToListAsync(cancellationToken);
 
         var result = new ProfileDto(profile.Id, profile.Version, profile.CreatedAt, profile.UpdatedAt, attributes, projects, cvs);

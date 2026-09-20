@@ -22,16 +22,18 @@ internal sealed class GetReadonlyProfileQueryHandler : IRequestHandler<GetReadon
 {
     private readonly IApplicationDbContext _context;
     private readonly ICacheService _cache;
+    private readonly IImageStorage _imageStorage;
 
-    public GetReadonlyProfileQueryHandler(IApplicationDbContext context, ICacheService cache)
+    public GetReadonlyProfileQueryHandler(IApplicationDbContext context, ICacheService cache, IImageStorage imageStorage)
     {
         _context = context;
         _cache = cache;
+        _imageStorage = imageStorage;
     }
 
     public async Task<ReadonlyProfileDto> Handle(GetReadonlyProfileQuery request, CancellationToken cancellationToken)
     {
-        var cacheKey = $"profile-readonly:v1:{request.ProfileId}";
+        var cacheKey = $"profile-readonly:v2:{request.ProfileId}";
         var cachedProfile = await _cache.GetAsync<ReadonlyProfileDto>(cacheKey, cancellationToken);
 
         if (cachedProfile is not null)
@@ -56,6 +58,28 @@ internal sealed class GetReadonlyProfileQueryHandler : IRequestHandler<GetReadon
             .Select(value => new ProfileAttributeDto(new AttributeValueDto(value.AttributeId, value.Order, value.Attribute!.Type == AttributeType.String ? value.StringValue : value.Attribute.Type == AttributeType.Text ? value.TextValue : value.Attribute.Type == AttributeType.Image ? value.ImageValue : null, value.NumericValue, value.DateValue, value.PeriodValue, value.CheckboxValue, value.DropdownOptionId), new DetailedAttributeDto(value.Attribute.Id, value.Attribute.Version, value.Attribute.Name, value.Attribute.Description, value.Attribute.Type, value.Attribute.Category, value.Attribute.IsSystem, value.Attribute.Options.OrderBy(option => option.Option).Select(option => new AttributeOptionDto(option.Id, option.Option)).ToList())))
             .ToListAsync(cancellationToken);
 
+        attributes = attributes
+            .Select(attribute =>
+            {
+                var value = attribute.Value;
+
+                if (attribute.Attribute.Type != AttributeType.Image ||
+                    value.StringValue is not string publicId ||
+                    string.IsNullOrWhiteSpace(publicId))
+                {
+                    return attribute;
+                }
+
+                return attribute with
+                {
+                    Value = value with
+                    {
+                        StringValue = _imageStorage.CreateUrl(publicId)
+                    }
+                };
+            })
+            .ToList();
+
         var projects = await _context.Projects
             .AsNoTracking()
             .Where(project => project.ProfileId == profile.Id)
@@ -66,8 +90,8 @@ internal sealed class GetReadonlyProfileQueryHandler : IRequestHandler<GetReadon
         var cvs = await _context.CVs
             .AsNoTracking()
             .Where(cv => cv.ProfileId == profile.Id && cv.Status == Status.Published)
-            .OrderByDescending(cv => cv.LastUpdated)
-            .Select(cv => new CVDto(cv.Id, cv.PositionId, cv.Position!.Name, cv.Status, cv.CreatedAt, cv.LastUpdated, cv.PublishedAt))
+            .OrderByDescending(cv => cv.PublishedAt)
+            .Select(cv => new CVDto(cv.Id, cv.PositionId, cv.Position!.Name, cv.Status, cv.CreatedAt, cv.PublishedAt))
             .ToListAsync(cancellationToken);
 
         var result = new ReadonlyProfileDto(profile.Id, profile.CreatedAt, profile.UpdatedAt, attributes, projects, cvs);

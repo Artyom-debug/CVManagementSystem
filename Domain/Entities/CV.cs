@@ -9,8 +9,6 @@ public sealed class CV : BaseEntity
 
     public DateTime CreatedAt { get; private set; }
 
-    public DateTime? LastUpdated { get; private set; }
-
     public DateTime? PublishedAt { get; private set; }
 
     public bool MarkedAsDeleted => Status == Status.Deleted;
@@ -36,7 +34,6 @@ public sealed class CV : BaseEntity
 
         Status = Status.Draft;
         CreatedAt = DateTime.UtcNow;
-        LastUpdated = CreatedAt;
         ProfileId = profileId;
         PositionId = positionId;
     }
@@ -51,7 +48,6 @@ public sealed class CV : BaseEntity
 
         Status = Status.Published;
         PublishedAt = DateTime.UtcNow;
-        LastUpdated = PublishedAt;
     }
 
     public void MarkCV()
@@ -61,24 +57,6 @@ public sealed class CV : BaseEntity
 
         Status = Status.Deleted;
         PublishedAt = null;
-        LastUpdated = DateTime.UtcNow;
-    }
-
-    public void Restore()
-    {
-        if (Status != Status.Deleted)
-            return;
-
-        Status = Status.Draft;
-        LastUpdated = DateTime.UtcNow;
-    }
-
-    public void Update()
-    {
-        if (Status == Status.Deleted)
-            throw new InvalidOperationException("Cannot update a deleted CV");
-
-        LastUpdated = DateTime.UtcNow;
     }
 
     public void AddLike(string recruterId)
