@@ -45,10 +45,10 @@ internal sealed class RemoveCVCommandHandler : IRequestHandler<RemoveCVCommand, 
         if (!canManageCV)
             return Result.Failure("You do not have permission to remove this CV.");
 
-        if (cv.MarkedAsDeleted)
-            return Result.Failure("The CV has already been deleted.");
+        if (cv.IsRemovedFromProfile)
+            return Result.Failure("The CV has already been removed from the profile.");
 
-        cv.MarkCV();
+        cv.RemoveFromProfile();
         cv.AddDomainEvent(new CVChangedEvent(cv.Id, cv.ProfileId, cv.PositionId));
         _context.SetOriginalVersion(cv, request.Version);
 

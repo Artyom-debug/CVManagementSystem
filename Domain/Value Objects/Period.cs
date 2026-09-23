@@ -1,5 +1,4 @@
 ﻿using Domain.Abstractions;
-using System.Xml.Linq;
 
 namespace Domain.Value_Objects;
 
@@ -9,18 +8,13 @@ public sealed class Period : ValueObject
 
     public DateOnly? End { get; }
 
-    public Period(DateOnly start, DateOnly end)
+    public Period(DateOnly start, DateOnly? end = null)
     {
-        if (end < start)
+        if (end.HasValue && end.Value < start)
             throw new ArgumentException("End date can't be earlier than start date");
-        this.Start = start;
-        this.End = end;
-    }
 
-    public Period(DateOnly start) 
-    {
-        this.Start = start;
-        this.End = null;
+        Start = start;
+        End = end;
     }
 
     protected override IEnumerable<object> GetEqualityComponents()

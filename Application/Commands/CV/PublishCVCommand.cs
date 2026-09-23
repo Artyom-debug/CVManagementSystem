@@ -50,18 +50,21 @@ internal sealed class PublishCVCommandHandler : IRequestHandler<PublishCVCommand
         if (cv.Status == Status.Published)
             return Result.Failure("The CV has already been published.");
 
-        if (cv.Status == Status.Deleted)
-            return Result.Failure("A deleted CV cannot be published.");
+        if (cv.IsRemovedFromProfile)
+            return Result.Failure("A CV removed from the profile cannot be published.");
 
-        var positionAttributes = await _context.PositionAttributes
+        var positionAttributes = await _context.Attributes
             .AsNoTracking()
-            .Where(item => item.PositionId == cv.PositionId)
-            .OrderBy(item => item.DisplayOrder)
+            .Where(attribute =>
+                attribute.IsSystem ||
+                _context.PositionAttributes.Any(positionAttribute =>
+                    positionAttribute.PositionId == cv.PositionId &&
+                    positionAttribute.AttributeId == attribute.Id))
             .Select(item => new
             {
-                item.AttributeId,
-                item.Attribute!.Name,
-                item.Attribute.Type
+                AttributeId = item.Id,
+                item.Name,
+                item.Type
             })
             .ToListAsync(cancellationToken);
 
@@ -80,9 +83,7 @@ internal sealed class PublishCVCommandHandler : IRequestHandler<PublishCVCommand
             .ToArray();
 
         if (unfilledAttributes.Length > 0)
-        {
             return Result.Failure(unfilledAttributes.Select(name => $"Attribute '{name}' must be filled before the CV can be published."));
-        }
 
         cv.Publish();
         cv.AddDomainEvent(new CVChangedEvent(cv.Id, cv.ProfileId, cv.PositionId));

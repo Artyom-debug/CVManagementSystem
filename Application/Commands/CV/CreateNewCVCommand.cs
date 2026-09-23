@@ -60,8 +60,17 @@ internal sealed class CreateNewCVCommandHandler : IRequestHandler<CreateNewCVCom
         var existingCV = await _context.CVs
             .SingleOrDefaultAsync(cv => cv.ProfileId == request.ProfileId && cv.PositionId == request.PositionId, cancellationToken);
 
-        if (existingCV is not null && !existingCV.MarkedAsDeleted)
-            return Result.Failure("A CV for this position already exists.");
+        if (existingCV is not null)
+        {
+            if (!existingCV.IsRemovedFromProfile)
+                return Result.Failure("A CV for this position already exists.");
+
+            existingCV.RestoreToProfile();
+            existingCV.AddDomainEvent(new CVChangedEvent(existingCV.Id, existingCV.ProfileId, existingCV.PositionId));
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return Result.Success(existingCV.Version);
+        }
 
         var cv = new Domain.Entities.CV(request.ProfileId, request.PositionId);
         cv.AddDomainEvent(new CVChangedEvent(cv.Id, cv.ProfileId, cv.PositionId));

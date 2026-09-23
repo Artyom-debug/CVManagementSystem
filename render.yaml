@@ -1,0 +1,52 @@
+services:
+  - type: web
+    name: cv-management-system
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_HTTP_PORTS
+        value: 10000
+      - key: UseHttpsRedirection
+        value: "true"
+      - key: ConnectionStrings__Postgres
+        sync: false
+      - key: ConnectionStrings__Redis
+        sync: false
+      - key: Jwt__SecretKey
+        sync: false
+      - key: AdminSeed__Email
+        sync: false
+      - key: AdminSeed__Password
+        sync: false
+      - key: Cloudinary__CloudName
+        sync: false
+      - key: Cloudinary__ApiKey
+        sync: false
+      - key: Cloudinary__ApiSecret
+        sync: false
+      - key: Cloudinary__UploadPreset
+        sync: false
+      - key: Cloudinary__DeliveryType
+        value: upload
+      - key: GoogleGmail__ClientId
+        sync: false
+      - key: GoogleGmail__ClientSecret
+        sync: false
+      - key: GoogleGmail__RefreshToken
+        sync: false
+      - key: GoogleGmail__SenderEmail
+        sync: false
+      - key: GoogleGmail__ConfirmationUrl
+        sync: false
+      - key: Authentication__Google__ClientId
+        sync: false
+      - key: Authentication__Google__ClientSecret
+        sync: false
+      - key: Authentication__Facebook__AppId
+        sync: false
+      - key: Authentication__Facebook__AppSecret
+        sync: false

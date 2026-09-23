@@ -37,7 +37,7 @@ internal sealed class AddCVLikeCommandHandler : IRequestHandler<AddCVLikeCommand
             .Include(cv => cv.Likes)
             .SingleOrDefaultAsync(cv => cv.Id == request.CVId, cancellationToken);
 
-        if (cv is null || cv.Status == Status.Deleted)
+        if (cv is null)
             return Result.Failure("CV was not found.");
 
         if (cv.Status != Status.Published)

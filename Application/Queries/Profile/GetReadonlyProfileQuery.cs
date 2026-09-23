@@ -33,7 +33,7 @@ internal sealed class GetReadonlyProfileQueryHandler : IRequestHandler<GetReadon
 
     public async Task<ReadonlyProfileDto> Handle(GetReadonlyProfileQuery request, CancellationToken cancellationToken)
     {
-        var cacheKey = $"profile-readonly:v2:{request.ProfileId}";
+        var cacheKey = $"profile-readonly:v3:{request.ProfileId}";
         var cachedProfile = await _cache.GetAsync<ReadonlyProfileDto>(cacheKey, cancellationToken);
 
         if (cachedProfile is not null)
@@ -45,6 +45,7 @@ internal sealed class GetReadonlyProfileQueryHandler : IRequestHandler<GetReadon
             .Select(profile => new
             {
                 profile.Id,
+                profile.Version,
                 profile.CreatedAt,
                 profile.UpdatedAt
             })
@@ -89,12 +90,15 @@ internal sealed class GetReadonlyProfileQueryHandler : IRequestHandler<GetReadon
 
         var cvs = await _context.CVs
             .AsNoTracking()
-            .Where(cv => cv.ProfileId == profile.Id && cv.Status == Status.Published)
+            .Where(cv =>
+                cv.ProfileId == profile.Id &&
+                cv.Status == Status.Published &&
+                !cv.IsRemovedFromProfile)
             .OrderByDescending(cv => cv.PublishedAt)
             .Select(cv => new CVDto(cv.Id, cv.PositionId, cv.Position!.Name, cv.Status, cv.CreatedAt, cv.PublishedAt))
             .ToListAsync(cancellationToken);
 
-        var result = new ReadonlyProfileDto(profile.Id, profile.CreatedAt, profile.UpdatedAt, attributes, projects, cvs);
+        var result = new ReadonlyProfileDto(profile.Id, profile.Version, profile.CreatedAt, profile.UpdatedAt, attributes, projects, cvs);
 
         var dependencies = attributes
             .Select(attribute => $"attribute:{attribute.Attribute.Id}")

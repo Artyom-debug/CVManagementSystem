@@ -99,14 +99,10 @@ internal sealed class TokenService : ITokenService
 
     private async Task<ApplicationUser> GetAllowedUserAsync(string userId)
     {
-        var user = await _userManager.FindByIdAsync(userId)
-            ?? throw new UnauthorizedAccessException("User was not found.");
+        var user = await _userManager.FindByIdAsync(userId) ?? throw new UnauthorizedAccessException("User was not found.");
 
-        if (!await _signInManager.CanSignInAsync(user) ||
-            await _userManager.IsLockedOutAsync(user))
-        {
+        if (!await _signInManager.CanSignInAsync(user) || await _userManager.IsLockedOutAsync(user))
             throw new UnauthorizedAccessException("User cannot sign in.");
-        }
 
         return user;
     }

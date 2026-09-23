@@ -63,9 +63,7 @@ internal sealed class DeleteProjectsRangeCommandHandler : IRequestHandler<Delete
             .ToArray();
 
         if (missingProjectIds.Length > 0)
-        {
             return Result.Failure($"Projects [{string.Join(", ", missingProjectIds)}] were not found in the selected profile.");
-        }
 
         profile.DeleteProjectRange(request.ProjectIds);
 

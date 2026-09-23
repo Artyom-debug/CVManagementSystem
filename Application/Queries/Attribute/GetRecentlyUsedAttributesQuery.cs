@@ -23,8 +23,7 @@ internal sealed class GetRecentlyUsedAttributesQueryHandler : IRequestHandler<Ge
 
     public async Task<IReadOnlyList<AttributeDto>> Handle(GetRecentlyUsedAttributesQuery request, CancellationToken cancellationToken)
     {
-        var userId = _user.Id
-            ?? throw new UnauthorizedAccessException("The user is not authenticated.");
+        var userId = _user.Id ?? throw new UnauthorizedAccessException("The user is not authenticated.");
 
         var attributeIds = await _cache.GetAsync(userId, cancellationToken);
 

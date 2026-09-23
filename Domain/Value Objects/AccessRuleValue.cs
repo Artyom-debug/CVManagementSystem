@@ -4,29 +4,22 @@ namespace Domain.Value_Objects;
 
 public sealed class AccessRuleValue : ValueObject
 {
-    public string? StringValue { get; }
+    public string? StringValue { get; private set; }
 
-    public double? NumericValue { get; }
+    public double? NumericValue { get; private set; }
 
-    public DateOnly? DateValue { get; }
+    public DateOnly? DateValue { get; private set; }
 
-    public DateOnly? PeriodStart { get; }
+    public DateOnly? PeriodStart { get; private set; }
 
-    public DateOnly? PeriodEnd { get; }
+    public DateOnly? PeriodEnd { get; private set; }
 
-    public bool? BooleanValue { get; }
+    public bool? BooleanValue { get; private set; }
 
-    public Guid? DropdownOptionId { get; }
+    public Guid? DropdownOptionId { get; private set; }
 
-    private AccessRuleValue(string? stringValue = null, double? numericValue = null, DateOnly? dateValue = null, DateOnly? periodStart = null, DateOnly? periodEnd = null, bool? booleanValue = null, Guid? dropdownOptionId = null)
+    private AccessRuleValue()
     {
-        StringValue = stringValue;
-        NumericValue = numericValue;
-        DateValue = dateValue;
-        PeriodStart = periodStart;
-        PeriodEnd = periodEnd;
-        BooleanValue = booleanValue;
-        DropdownOptionId = dropdownOptionId;
     }
 
     public static AccessRuleValue FromString(string value)
@@ -34,31 +27,35 @@ public sealed class AccessRuleValue : ValueObject
         if (string.IsNullOrWhiteSpace(value))
             throw new ArgumentException("Rule value cannot be empty", nameof(value));
 
-        return new AccessRuleValue(stringValue: value);
+        return new AccessRuleValue { StringValue = value };
     }
 
     public static AccessRuleValue FromNumeric(double value) =>
-        new(numericValue: value);
+        new() { NumericValue = value };
 
     public static AccessRuleValue FromDate(DateOnly value) =>
-        new(dateValue: value);
+        new() { DateValue = value };
 
     public static AccessRuleValue FromPeriod(Period value)
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        return new AccessRuleValue(periodStart: value.Start, periodEnd: value.End);
+        return new AccessRuleValue
+        {
+            PeriodStart = value.Start,
+            PeriodEnd = value.End
+        };
     }
 
     public static AccessRuleValue FromBoolean(bool value) =>
-        new(booleanValue: value);
+        new() { BooleanValue = value };
 
     public static AccessRuleValue FromDropdown(Guid optionId)
     {
         if (optionId == Guid.Empty)
             throw new ArgumentException("Dropdown option id cannot be empty", nameof(optionId));
 
-        return new AccessRuleValue(dropdownOptionId: optionId);
+        return new AccessRuleValue { DropdownOptionId = optionId };
     }
 
     protected override IEnumerable<object> GetEqualityComponents()

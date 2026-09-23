@@ -38,7 +38,7 @@ internal sealed class RemoveCVLikeCommandHandler : IRequestHandler<RemoveCVLikeC
             .Include(cv => cv.Likes)
             .SingleOrDefaultAsync(cv => cv.Id == request.CVId, cancellationToken);
 
-        if (cv is null || cv.Status == Status.Deleted)
+        if (cv is null)
             return Result.Failure("CV was not found.");
 
         if (cv.Likes.All(like => like.RecruterId != recruiterId))

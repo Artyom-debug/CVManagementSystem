@@ -21,7 +21,7 @@ public sealed class ProfileController : ControllerBase
         _sender = sender;
     }
 
-    [Authorize(Policy = Policies.ManageCandidateProfile)]
+    [Authorize(Policy = Policies.ManagePersonalProfile)]
     [HttpGet("me")]
     public async Task<ActionResult<ProfileDto>> GetPersonal(CancellationToken cancellationToken)
     {
@@ -35,12 +35,12 @@ public sealed class ProfileController : ControllerBase
         return Ok(await _sender.Send(new GetReadonlyProfileQuery(profileId), cancellationToken));
     }
 
-    [Authorize(Policy = Policies.ManageCandidateProfile)]
+    [Authorize(Policy = Policies.ManagePersonalProfile)]
     [HttpPut("initial")]
     public Task<ActionResult<Result>> CompleteInitial(CompleteInitialProfileCommand command, CancellationToken cancellationToken) =>
         SendCommand(command, cancellationToken);
 
-    [Authorize(Policy = Policies.ManageCandidateProfile)]
+    [Authorize(Policy = Policies.ManagePersonalProfile)]
     [HttpPost("{profileId:guid}/attributes/{attributeId:guid}/image-upload-data")]
     public async Task<ActionResult<ImageUploadData>> CreateImageUploadData(Guid profileId, Guid attributeId, CancellationToken cancellationToken)
     {
@@ -53,7 +53,7 @@ public sealed class ProfileController : ControllerBase
     public Task<ActionResult<Result>> AddAttribute(AddNewProfileAttributeCommand command, CancellationToken cancellationToken) =>
         SendCommand(command, cancellationToken);
 
-    [Authorize(Policy = Policies.ManageCandidateProfile)]
+    [Authorize(Policy = Policies.ManagePersonalProfile)]
     [HttpPut("attributes")]
     public Task<ActionResult<Result>> UpdateAttribute(UpdateProfileAttributeValueCommand command, CancellationToken cancellationToken) =>
         SendCommand(command, cancellationToken);

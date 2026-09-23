@@ -15,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using StackExchange.Redis;
 using System.Security.Claims;
 
@@ -36,9 +37,38 @@ public static class DependencyInjection
             .GetConnectionString("Postgres")
             ?? throw new InvalidOperationException("Database connection string was not found.");
 
-        builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+        builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(CreatePostgresConnectionString(connectionString)));
 
         builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+        builder.Services.AddScoped<ApplicationDbContextInitializer>();
+    }
+
+    private static string CreatePostgresConnectionString(string connectionString)
+    {
+        if (!connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
+            !connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        {
+            return connectionString;
+        }
+
+        var uri = new Uri(connectionString);
+        var credentials = uri.UserInfo.Split(':', 2);
+        if (credentials.Length != 2)
+            throw new InvalidOperationException("PostgreSQL URI must contain a username and password.");
+
+        var options = new NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.Port > 0 ? uri.Port : 5432,
+            Database = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/')),
+            Username = Uri.UnescapeDataString(credentials[0]),
+            Password = Uri.UnescapeDataString(credentials[1])
+        };
+
+        if (uri.Query.Contains("sslmode=require", StringComparison.OrdinalIgnoreCase))
+            options.SslMode = SslMode.Require;
+
+        return options.ConnectionString;
     }
 
     private static void AddIdentity(IHostApplicationBuilder builder)
@@ -49,23 +79,18 @@ public static class DependencyInjection
         builder.Services
             .AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
-                options.Password.RequiredLength = 6;
+                options.Password.RequiredLength = 5;
                 options.Password.RequireDigit = true;
                 options.Password.RequireLowercase = true;
                 options.Password.RequireUppercase = true;
                 options.Password.RequireNonAlphanumeric = false;
 
                 options.User.RequireUniqueEmail = true;
-                options.SignIn.RequireConfirmedEmail = false;
+                options.SignIn.RequireConfirmedEmail = true;
 
                 options.ClaimsIdentity.UserIdClaimType = ClaimTypes.NameIdentifier;
-                options.ClaimsIdentity.UserNameClaimType = ClaimTypes.Name;
                 options.ClaimsIdentity.EmailClaimType = ClaimTypes.Email;
                 options.ClaimsIdentity.RoleClaimType = ClaimTypes.Role;
-
-                options.Lockout.AllowedForNewUsers = true;
-                options.Lockout.MaxFailedAccessAttempts = 5;
-                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             })
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
@@ -77,7 +102,7 @@ public static class DependencyInjection
 
         builder.Services.Configure<JwtOptions>(jwtSection);
 
-        builder.Services
+        var authentication = builder.Services
             .AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -108,9 +133,38 @@ public static class DependencyInjection
                 };
             });
 
+        var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
+        var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+
+        if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+        {
+            authentication.AddGoogle(options =>
+            {
+                options.ClientId = googleClientId;
+                options.ClientSecret = googleClientSecret;
+                options.SignInScheme = IdentityConstants.ExternalScheme;
+                options.CallbackPath = "/api/auth/signin-google";
+            });
+        }
+
+        var facebookAppId = builder.Configuration["Authentication:Facebook:AppId"];
+        var facebookAppSecret = builder.Configuration["Authentication:Facebook:AppSecret"];
+
+        if (!string.IsNullOrWhiteSpace(facebookAppId) && !string.IsNullOrWhiteSpace(facebookAppSecret))
+        {
+            authentication.AddFacebook(options =>
+            {
+                options.AppId = facebookAppId;
+                options.AppSecret = facebookAppSecret;
+                options.SignInScheme = IdentityConstants.ExternalScheme;
+                options.CallbackPath = "/api/auth/signin-facebook";
+            });
+        }
+
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         builder.Services.AddScoped<IIdentityService, IdentityService>();
+        builder.Services.AddHttpClient<IEmailSender, EmailSender>();
         builder.Services.AddSingleton(TimeProvider.System);
     }
 
@@ -186,14 +240,45 @@ public static class DependencyInjection
 
         builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
         {
-            var options = ConfigurationOptions.Parse(redisConnection);
-            options.AbortOnConnectFail = false;
-            options.ClientName = "CVManagementSystem";
+            var options = CreateRedisOptions(redisConnection);
             return ConnectionMultiplexer.Connect(options);
         });
 
         builder.Services.AddSingleton<ICacheService, RedisCacheService>();
         builder.Services.AddSingleton<IRecentAttributesCache, RecentAttributesCache>();
+    }
+
+    private static ConfigurationOptions CreateRedisOptions(string connectionString)
+    {
+        var isRedisUri =
+            connectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) ||
+            connectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase);
+
+        if (!isRedisUri)
+        {
+            var options = ConfigurationOptions.Parse(connectionString);
+            options.AbortOnConnectFail = false;
+            options.ClientName = "CVManagementSystem";
+            return options;
+        }
+
+        var uri = new Uri(connectionString);
+
+        var credentials = uri.UserInfo.Split(':', 2);
+        if (credentials.Length != 2 || string.IsNullOrWhiteSpace(credentials[1]))
+            throw new InvalidOperationException("Redis URI must contain a password.");
+
+        var uriOptions = new ConfigurationOptions
+        {
+            User = Uri.UnescapeDataString(credentials[0]),
+            Password = Uri.UnescapeDataString(credentials[1]),
+            Ssl = uri.Scheme == "rediss",
+            AbortOnConnectFail = false,
+            ClientName = "CVManagementSystem"
+        };
+
+        uriOptions.EndPoints.Add(uri.Host, uri.Port > 0 ? uri.Port : 6379);
+        return uriOptions;
     }
 
     private static void AddCloudinary(IHostApplicationBuilder builder)
@@ -207,7 +292,6 @@ public static class DependencyInjection
             .Validate(options => !string.IsNullOrWhiteSpace(options.CloudName), "Cloudinary cloud name is required.")
             .Validate(options => !string.IsNullOrWhiteSpace(options.ApiKey), "Cloudinary API key is required.")
             .Validate(options => !string.IsNullOrWhiteSpace(options.ApiSecret), "Cloudinary API secret is required.")
-            .Validate(options => !string.IsNullOrWhiteSpace(options.UploadPreset), "Cloudinary upload preset is required.")
             .Validate(options => options.DeliveryType is "upload" or "private" or "authenticated", "Unknown Cloudinary delivery type.")
             .ValidateOnStart();
 

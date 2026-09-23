@@ -1,7 +1,7 @@
 using Domain.Enums;
 using Domain.Value_Objects;
 
-namespace Application.Commands.Position;
+namespace Application.Common.Models;
 
 public sealed record PositionAttributeInput(Guid AttributeId, int DisplayOrder);
 

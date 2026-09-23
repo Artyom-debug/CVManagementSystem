@@ -36,7 +36,8 @@ internal sealed class GetAttributeBySearchQueryHandler : IRequestHandler<GetAttr
         return await _context.Attributes
             .AsNoTracking()
             .Where(attribute => attribute.Name.StartsWith(search) || EF.Functions.TrigramsAreSimilar(attribute.Name, search))
-            .OrderBy(attribute => attribute.Name)
+            .OrderByDescending(attribute => attribute.IsSystem)
+            .ThenBy(attribute => attribute.Name)
             .Select(attribute => new AttributeDto(attribute.Id, attribute.Version, attribute.Name, attribute.Type, attribute.Category, attribute.IsSystem))
             .ToListAsync(cancellationToken);
     }

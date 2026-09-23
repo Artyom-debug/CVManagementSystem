@@ -1,5 +1,9 @@
 <Solution>
-  <Folder Name="/Client/" />
+  <Folder Name="/Client/">
+    <Project Path="Client/Client.esproj">
+      <Build />
+    </Project>
+  </Folder>
   <Folder Name="/Server/">
     <Project Path="Application/Application.csproj" Id="005ce8bd-701f-449e-bf4c-3f6f95da4427" />
     <Project Path="Domain/Domain.csproj" Id="69971345-310e-4eec-ac71-42921af652a6" />
@@ -7,4 +11,10 @@
     <Project Path="Web/Web.csproj" Id="c5e13137-f4bb-435a-86a3-2a53e3f97091" />
   </Folder>
   <Folder Name="/Tests/" />
+  <Folder Name="/Элементы решения/">
+    <File Path=".dockerignore" />
+    <File Path=".gitignore" />
+    <File Path="Dockerfile" />
+    <File Path="Web/compose.yaml" />
+  </Folder>
 </Solution>

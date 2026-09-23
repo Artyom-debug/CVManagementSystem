@@ -69,6 +69,13 @@ internal sealed class UpdateProfileAttributeValueCommandHandler : IRequestHandle
         if (attribute is null)
             return Result.Failure($"Attribute '{request.Value.AttributeId}' was not found.");
 
+        var isRecruiterOnly = _user.Roles?.Contains(Roles.Recruiter) == true &&
+                              _user.Roles.Contains(Roles.Candidate) == false &&
+                              _user.Roles.Contains(Roles.Administrator) == false;
+
+        if (isRecruiterOnly && !attribute.IsSystem)
+            throw new ForbiddenAccessException("Recruiters can update only system profile attributes.");
+
         var value = request.Value.GetValue(attribute.Type);
 
         if (attribute.IsSystem && (value is null || value is string text && string.IsNullOrWhiteSpace(text)))

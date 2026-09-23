@@ -54,7 +54,8 @@ internal sealed class GetAttributesQueryHandler : IRequestHandler<GetAttributesQ
 
         var skip = (request.Page - 1) * request.PageSize;
         var items = await query
-            .OrderBy(attribute => attribute.Name)
+            .OrderByDescending(attribute => attribute.IsSystem)
+            .ThenBy(attribute => attribute.Name)
             .Skip(skip)
             .Take(request.PageSize + 1)
             .Select(attribute => new AttributeDto(attribute.Id, attribute.Version, attribute.Name, attribute.Type, attribute.Category, attribute.IsSystem))

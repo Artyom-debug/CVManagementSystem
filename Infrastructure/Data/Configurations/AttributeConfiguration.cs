@@ -31,10 +31,10 @@ public sealed class AttributeConfiguration : IEntityTypeConfiguration<Domain.Ent
         builder.Property(attribute => attribute.IsSystem)
             .IsRequired();
 
-        builder.HasIndex(attribute => attribute.Name)
+        builder.HasIndex(attribute => attribute.Name, "IX_Attributes_Name_Unique")
             .IsUnique();
 
-        builder.HasIndex(attribute => attribute.Name)
+        builder.HasIndex(attribute => attribute.Name, "IX_Attributes_Name_Trigram")
             .HasMethod("gin")
             .HasOperators("gin_trgm_ops");
 

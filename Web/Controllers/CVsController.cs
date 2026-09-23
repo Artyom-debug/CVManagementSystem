@@ -47,6 +47,11 @@ public sealed class CVsController : ControllerBase
     public Task<ActionResult<Result>> Remove(RemoveCVCommand command, CancellationToken cancellationToken) =>
         SendCommand(command, cancellationToken);
 
+    [Authorize(Policy = Policies.DeleteCV)]
+    [HttpDelete("permanent")]
+    public Task<ActionResult<Result>> Delete(DeleteCVCommand command, CancellationToken cancellationToken) =>
+        SendCommand(command, cancellationToken);
+
     [Authorize(Policy = Policies.LikeCV)]
     [HttpPost("likes")]
     public Task<ActionResult<Result>> AddLike(AddCVLikeCommand command, CancellationToken cancellationToken) =>

@@ -27,9 +27,11 @@ public sealed class ImageStorage : IImageStorage
         {
             ["public_id"] = publicId,
             ["timestamp"] = timestamp,
-            ["type"] = _cloudinaryOptions.DeliveryType,
-            ["upload_preset"] = _cloudinaryOptions.UploadPreset
+            ["type"] = _cloudinaryOptions.DeliveryType
         };
+
+        if (!string.IsNullOrWhiteSpace(_cloudinaryOptions.UploadPreset))
+            parameters["upload_preset"] = _cloudinaryOptions.UploadPreset;
 
         var signature = _cloudinary.Api.SignParameters(parameters);
         var account = _cloudinary.Api.Account;

@@ -1,4 +1,5 @@
 using Application.Common.Exceptions;
+using Application.Constants;
 using Application.Dtos;
 using Application.Interfaces;
 using Domain.Enums;
@@ -29,7 +30,10 @@ internal sealed class GetPersonalProfileQueryHandler : IRequestHandler<GetPerson
         if (string.IsNullOrWhiteSpace(_user.Id))
             throw new UnauthorizedAccessException("User is not authenticated.");
 
-        var cacheKey = $"profile-personal:v2:user:{_user.Id}";
+        var systemOnly = _user.Roles?.Contains(Roles.Recruiter) == true &&
+                         _user.Roles.Contains(Roles.Candidate) == false &&
+                         _user.Roles.Contains(Roles.Administrator) == false;
+        var cacheKey = $"profile-personal:v3:user:{_user.Id}:system-only:{systemOnly}";
         var cachedProfile = await _cache.GetAsync<ProfileDto>(cacheKey, cancellationToken);
 
         if (cachedProfile is not null)
@@ -50,7 +54,9 @@ internal sealed class GetPersonalProfileQueryHandler : IRequestHandler<GetPerson
 
         var attributes = await _context.ProfileAttributes
             .AsNoTracking()
-            .Where(value => value.ProfileId == profile.Id)
+            .Where(value =>
+                value.ProfileId == profile.Id &&
+                (!systemOnly || value.Attribute!.IsSystem))
             .OrderBy(value => value.Order)
             .Select(value => new ProfileAttributeDto(
                 new AttributeValueDto(
@@ -106,19 +112,25 @@ internal sealed class GetPersonalProfileQueryHandler : IRequestHandler<GetPerson
             })
             .ToList();
 
-        var projects = await _context.Projects
-            .AsNoTracking()
-            .Where(project => project.ProfileId == profile.Id)
-            .OrderBy(project => project.Period.Start)
-            .Select(project => new ProjectDto(project.Id, project.Name, project.Description, project.Period, project.Tags.OrderBy(tag => tag.Name).Select(tag => tag.Name).ToList()))
-            .ToListAsync(cancellationToken);
+        var projects = systemOnly
+            ? []
+            : await _context.Projects
+                .AsNoTracking()
+                .Where(project => project.ProfileId == profile.Id)
+                .OrderBy(project => project.Period.Start)
+                .Select(project => new ProjectDto(project.Id, project.Name, project.Description, project.Period, project.Tags.OrderBy(tag => tag.Name).Select(tag => tag.Name).ToList()))
+                .ToListAsync(cancellationToken);
 
-        var cvs = await _context.CVs
-            .AsNoTracking()
-            .Where(cv => cv.ProfileId == profile.Id && cv.Status != Status.Deleted)
-            .OrderByDescending(cv => cv.CreatedAt)
-            .Select(cv => new CVDto(cv.Id, cv.PositionId, cv.Position!.Name, cv.Status, cv.CreatedAt, cv.PublishedAt))
-            .ToListAsync(cancellationToken);
+        var cvs = systemOnly
+            ? []
+            : await _context.CVs
+                .AsNoTracking()
+                .Where(cv =>
+                    cv.ProfileId == profile.Id &&
+                    !cv.IsRemovedFromProfile)
+                .OrderByDescending(cv => cv.CreatedAt)
+                .Select(cv => new CVDto(cv.Id, cv.PositionId, cv.Position!.Name, cv.Status, cv.CreatedAt, cv.PublishedAt))
+                .ToListAsync(cancellationToken);
 
         var result = new ProfileDto(profile.Id, profile.Version, profile.CreatedAt, profile.UpdatedAt, attributes, projects, cvs);
 

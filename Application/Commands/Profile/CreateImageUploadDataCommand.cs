@@ -54,6 +54,13 @@ internal sealed class CreateImageUploadDataCommandHandler : IRequestHandler<Crea
         if (attribute.Type != AttributeType.Image)
             throw new InvalidOperationException("Upload data can only be created for an image attribute.");
 
+        var isRecruiterOnly = _user.Roles?.Contains(Roles.Recruiter) == true &&
+                              _user.Roles.Contains(Roles.Candidate) == false &&
+                              _user.Roles.Contains(Roles.Administrator) == false;
+
+        if (isRecruiterOnly && !attribute.IsSystem)
+            throw new ForbiddenAccessException("Recruiters can upload images only for system profile attributes.");
+
         return _imageStorage.CreateUploadData(profile.Id, attribute.Id);
     }
 }

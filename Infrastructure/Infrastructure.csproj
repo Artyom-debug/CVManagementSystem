@@ -12,6 +12,9 @@
 
   <ItemGroup>
     <PackageReference Include="CloudinaryDotNet" Version="1.29.3" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.76.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Facebook" Version="9.0.19" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.19" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.19" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.19" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.19">

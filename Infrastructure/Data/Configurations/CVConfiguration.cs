@@ -8,7 +8,10 @@ public sealed class CVConfiguration : IEntityTypeConfiguration<CV>
 {
     public void Configure(EntityTypeBuilder<CV> builder)
     {
-        builder.ToTable("CVs");
+        builder.ToTable("CVs", table =>
+        {
+            table.HasCheckConstraint("CK_CVs_Status", "\"Status\" IN ('Draft', 'Published')");
+        });
         builder.ConfigureBaseEntity();
 
         builder.Property(cv => cv.Status)
@@ -19,7 +22,8 @@ public sealed class CVConfiguration : IEntityTypeConfiguration<CV>
         builder.Property(cv => cv.CreatedAt)
             .IsRequired();
 
-        builder.Ignore(cv => cv.MarkedAsDeleted);
+        builder.Property(cv => cv.IsRemovedFromProfile)
+            .IsRequired();
 
         builder.HasOne(cv => cv.Profile)
             .WithMany()

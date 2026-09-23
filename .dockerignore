@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+.git/
+.vs/
+.vscode/
+.idea/
+.env
+.env.*
+**/appsettings.json
+**/appsettings.*.json
+!Web/appsettings.json
+**/*.user
+**/*.suo
+**/*.log

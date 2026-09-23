@@ -11,7 +11,7 @@ public sealed class CV : BaseEntity
 
     public DateTime? PublishedAt { get; private set; }
 
-    public bool MarkedAsDeleted => Status == Status.Deleted;
+    public bool IsRemovedFromProfile { get; private set; }
 
     public Guid ProfileId { get; private set; }
 
@@ -34,6 +34,7 @@ public sealed class CV : BaseEntity
 
         Status = Status.Draft;
         CreatedAt = DateTime.UtcNow;
+        IsRemovedFromProfile = false;
         ProfileId = profileId;
         PositionId = positionId;
     }
@@ -43,20 +44,27 @@ public sealed class CV : BaseEntity
 
         if (Status == Status.Published)
             throw new InvalidOperationException("This CV has already published");
-        if (Status == Status.Deleted)
-            throw new InvalidOperationException("Cannot publish a deleted CV");
+        if (IsRemovedFromProfile)
+            throw new InvalidOperationException("Cannot publish a CV removed from the profile");
 
         Status = Status.Published;
         PublishedAt = DateTime.UtcNow;
     }
 
-    public void MarkCV()
+    public void RemoveFromProfile()
     {
-        if (Status == Status.Deleted)
-            throw new InvalidOperationException("This CV has already deleted");
+        if (IsRemovedFromProfile)
+            throw new InvalidOperationException("This CV has already been removed from the profile");
 
-        Status = Status.Deleted;
-        PublishedAt = null;
+        IsRemovedFromProfile = true;
+    }
+
+    public void RestoreToProfile()
+    {
+        if (!IsRemovedFromProfile)
+            return;
+
+        IsRemovedFromProfile = false;
     }
 
     public void AddLike(string recruterId)

@@ -1,8 +1,6 @@
 using Domain.Entities;
 using Domain.Value_Objects;
-using Infrastructure.Data.Serialization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Infrastructure.Data.Configurations;
@@ -30,6 +28,15 @@ public sealed class PositionConfiguration : IEntityTypeConfiguration<Position>
 
         builder.Property(position => position.IsPublic)
             .IsRequired();
+
+        builder.Property(position => position.CreatedAt)
+            .IsRequired();
+
+        builder.HasIndex(position => new
+        {
+            position.CreatedAt,
+            position.Id
+        }).IsDescending(true, false);
 
         builder.HasMany(position => position.Tags)
             .WithMany()
@@ -73,13 +80,32 @@ public sealed class PositionConfiguration : IEntityTypeConfiguration<Position>
                 .HasMaxLength(30)
                 .IsRequired();
 
-            var valueProperty = rules.Property(rule => rule.Value)
-                .HasConversion(AccessRuleValueJson.CreateConverter())
-                .HasColumnType("jsonb")
-                .HasColumnName("Value")
-                .IsRequired();
+            rules.OwnsOne(rule => rule.Value, value =>
+            {
+                value.Property(item => item.StringValue)
+                    .HasColumnName("StringValue");
 
-            valueProperty.Metadata.SetValueComparer(new ValueComparer<AccessRuleValue>((left, right) => left == right, value => value.GetHashCode(), value => value));
+                value.Property(item => item.NumericValue)
+                    .HasColumnName("NumericValue");
+
+                value.Property(item => item.DateValue)
+                    .HasColumnName("DateValue");
+
+                value.Property(item => item.PeriodStart)
+                    .HasColumnName("PeriodStart");
+
+                value.Property(item => item.PeriodEnd)
+                    .HasColumnName("PeriodEnd");
+
+                value.Property(item => item.BooleanValue)
+                    .HasColumnName("BooleanValue");
+
+                value.Property(item => item.DropdownOptionId)
+                    .HasColumnName("DropdownOptionId");
+            });
+
+            rules.Navigation(rule => rule.Value)
+                .IsRequired();
 
             rules.HasOne<Domain.Entities.Attribute>()
                 .WithMany()

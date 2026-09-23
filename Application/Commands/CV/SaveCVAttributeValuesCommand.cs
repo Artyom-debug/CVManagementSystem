@@ -62,20 +62,25 @@ internal sealed class SaveCVAttributeValuesCommandHandler : IRequestHandler<Save
         if (!canManageCV)
             return Result.Failure("You do not have permission to modify this CV.");
 
-        if (cv.Status == Status.Deleted)
-            return Result.Failure("A deleted CV cannot be modified.");
+        if (cv.IsRemovedFromProfile)
+            return Result.Failure("A CV removed from the profile cannot be modified.");
 
         var attributeIds = request.Values
             .Select(value => value.AttributeId)
             .ToArray();
 
-        var positionAttributeIds = await _context.PositionAttributes
+        var cvAttributeIds = await _context.Attributes
             .AsNoTracking()
-            .Where(positionAttribute => positionAttribute.PositionId == cv.PositionId && attributeIds.Contains(positionAttribute.AttributeId))
-            .Select(positionAttribute => positionAttribute.AttributeId)
+            .Where(attribute =>
+                attributeIds.Contains(attribute.Id) &&
+                (attribute.IsSystem ||
+                 _context.PositionAttributes.Any(positionAttribute =>
+                     positionAttribute.PositionId == cv.PositionId &&
+                     positionAttribute.AttributeId == attribute.Id)))
+            .Select(attribute => attribute.Id)
             .ToHashSetAsync(cancellationToken);
 
-        if (positionAttributeIds.Count != attributeIds.Length)
+        if (cvAttributeIds.Count != attributeIds.Length)
             return Result.Failure("One or more attributes do not belong to this CV template.");
 
         var attributes = await _context.Attributes

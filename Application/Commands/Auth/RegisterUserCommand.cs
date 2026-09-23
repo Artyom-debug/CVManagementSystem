@@ -5,15 +5,12 @@ using MediatR;
 
 namespace Application.Commands.Auth;
 
-public sealed record RegisterUserCommand(string UserName, string Email, string Password) : IRequest<Result>;
+public sealed record RegisterUserCommand(string Email, string Password) : IRequest<Result>;
 
 public sealed class RegisterUserCommandValidator : AbstractValidator<RegisterUserCommand>
 {
     public RegisterUserCommandValidator()
     {
-        RuleFor(command => command.UserName)
-            .NotEmpty()
-            .MaximumLength(100);
 
         RuleFor(command => command.Email)
             .NotEmpty()
@@ -30,16 +27,26 @@ public sealed class RegisterUserCommandValidator : AbstractValidator<RegisterUse
 internal sealed class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, Result>
 {
     private readonly IIdentityService _identityService;
+    private readonly IEmailSender _emailSender;
 
-    public RegisterUserCommandHandler(IIdentityService identityService)
+    public RegisterUserCommandHandler(IIdentityService identityService, IEmailSender emailSender)
     {
         _identityService = identityService;
+        _emailSender = emailSender;
     }
 
     public async Task<Result> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
     {
-        var (result, _) = await _identityService.CreateUserAsync(request.UserName, request.Password, request.Email, cancellationToken);
+        var (result, confirmationToken) = await _identityService.StartRegistrationAsync(request.Password, request.Email, cancellationToken);
 
-        return result;
+        if (!result.Succeeded)
+            return result;
+
+        if (string.IsNullOrWhiteSpace(confirmationToken))
+            return Result.Failure("Could not start email confirmation. Please try again.");
+
+        await _emailSender.SendConfirmationEmailAsync(request.Email.Trim(), confirmationToken, cancellationToken);
+
+        return Result.Success();
     }
 }

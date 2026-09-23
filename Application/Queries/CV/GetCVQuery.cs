@@ -39,7 +39,7 @@ internal sealed class GetCVQueryHandler : IRequestHandler<GetCVQuery, CVDetailsD
         if (string.IsNullOrWhiteSpace(_user.Id))
             throw new UnauthorizedAccessException("User is not authenticated.");
 
-        var cacheKey = $"cv-details:v2:{request.CVId}:user:{_user.Id}";
+        var cacheKey = $"cv-details:v3:{request.CVId}:user:{_user.Id}";
         var cachedCV = await _cache.GetAsync<CVDetailsDto>(cacheKey, cancellationToken);
 
         if (cachedCV is not null)
@@ -47,7 +47,7 @@ internal sealed class GetCVQueryHandler : IRequestHandler<GetCVQuery, CVDetailsD
 
         var cv = await _context.CVs
             .AsNoTracking()
-            .Where(cv => cv.Id == request.CVId && cv.Status != Status.Deleted)
+            .Where(cv => cv.Id == request.CVId)
             .Select(cv => new
             {
                 cv.Id,
@@ -61,6 +61,7 @@ internal sealed class GetCVQueryHandler : IRequestHandler<GetCVQuery, CVDetailsD
                 cv.Position.MaxProjectCount,
                 PositionTags = cv.Position.Tags.Select(tag => tag.Name).ToArray(),
                 cv.Status,
+                cv.IsRemovedFromProfile,
                 cv.CreatedAt,
                 cv.PublishedAt,
                 LikesCount = cv.Likes.Count,
@@ -72,38 +73,49 @@ internal sealed class GetCVQueryHandler : IRequestHandler<GetCVQuery, CVDetailsD
         var isOwner = cv.ProfileUserId == _user.Id;
         var isAdministrator = _user.Roles?.Contains(Roles.Administrator) == true;
         var isRecruiter = _user.Roles?.Contains(Roles.Recruiter) == true;
+        var canOwnerView = isOwner && !cv.IsRemovedFromProfile;
+        var canRecruiterView = isRecruiter && cv.Status == Status.Published;
 
-        if (!isOwner && !isAdministrator && !(isRecruiter && cv.Status == Status.Published))
+        if (!canOwnerView && !canRecruiterView && !isAdministrator)
             throw new ForbiddenAccessException("You do not have permission to view this CV.");
 
-        var attributes = await _context.PositionAttributes
+        var positionOrder = await _context.PositionAttributes.AsNoTracking()
+            .Where(x => x.PositionId == cv.PositionId)
+            .ToDictionaryAsync(x => x.AttributeId, x => x.DisplayOrder, cancellationToken);
+
+        var cvAttributesQuery = _context.Attributes
             .AsNoTracking()
-            .Where(positionAttribute => positionAttribute.PositionId == cv.PositionId)
-            .OrderBy(positionAttribute => positionAttribute.DisplayOrder)
-            .Select(positionAttribute => new CVAttributeDto(
-                positionAttribute.DisplayOrder,
+            .Where(attribute =>
+                attribute.IsSystem ||
+                _context.PositionAttributes.Any(positionAttribute =>
+                    positionAttribute.PositionId == cv.PositionId &&
+                    positionAttribute.AttributeId == attribute.Id));
+
+        var attributes = await cvAttributesQuery
+            .Select(attribute => new CVAttributeDto(
+                0,
                 new DetailedAttributeDto(
-                    positionAttribute.AttributeId,
-                    positionAttribute.Attribute!.Version,
-                    positionAttribute.Attribute.Name,
-                    positionAttribute.Attribute.Description,
-                    positionAttribute.Attribute.Type,
-                    positionAttribute.Attribute.Category,
-                    positionAttribute.Attribute.IsSystem,
-                    positionAttribute.Attribute.Options
+                    attribute.Id,
+                    attribute.Version,
+                    attribute.Name,
+                    attribute.Description,
+                    attribute.Type,
+                    attribute.Category,
+                    attribute.IsSystem,
+                    attribute.Options
                         .OrderBy(option => option.Option)
                         .Select(option => new AttributeOptionDto(option.Id, option.Option))
                         .ToList()),
                 _context.ProfileAttributes
-                    .Where(value => value.ProfileId == cv.ProfileId && value.AttributeId == positionAttribute.AttributeId)
+                    .Where(value => value.ProfileId == cv.ProfileId && value.AttributeId == attribute.Id)
                     .Select(value => new AttributeValueDto(
                         value.AttributeId,
                         value.Order,
-                        value.Attribute!.Type == AttributeType.String
+                        attribute.Type == AttributeType.String
                             ? value.StringValue
-                            : value.Attribute.Type == AttributeType.Text
+                            : attribute.Type == AttributeType.Text
                                 ? value.TextValue
-                                : value.Attribute.Type == AttributeType.Image
+                                : attribute.Type == AttributeType.Image
                                     ? value.ImageValue
                                     : null,
                         value.NumericValue,
@@ -113,6 +125,10 @@ internal sealed class GetCVQueryHandler : IRequestHandler<GetCVQuery, CVDetailsD
                         value.DropdownOptionId))
                     .SingleOrDefault()))
             .ToListAsync(cancellationToken);
+
+        attributes = attributes.OrderByDescending(x => x.Attribute.IsSystem)
+            .ThenBy(x => x.Attribute.IsSystem ? 0 : positionOrder.GetValueOrDefault(x.Attribute.Id))
+            .Select((x, index) => x with { DisplayOrder = index }).ToList();
 
         attributes = attributes
             .Select(attribute =>
@@ -158,6 +174,7 @@ internal sealed class GetCVQueryHandler : IRequestHandler<GetCVQuery, CVDetailsD
 
         var dependencies = attributes
             .Select(attribute => $"attribute:{attribute.Attribute.Id}")
+            .Append("attribute-library")
             .Append($"cv:{cv.Id}")
             .Append($"profile:{cv.ProfileId}")
             .Append($"position:{cv.PositionId}")

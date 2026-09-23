@@ -20,5 +20,7 @@ public sealed class CVChangedEventHandler : INotificationHandler<CVChangedEvent>
         await _cache.RemoveDependenciesAsync($"profile:{notification.ProfileId}", cancellationToken);
 
         await _cache.RemoveDependenciesAsync($"position:{notification.PositionId}", cancellationToken);
+
+        await _cache.RemoveDependenciesAsync("position-library", cancellationToken);
     }
 }

@@ -11,6 +11,8 @@ public sealed class Position : BaseEntity
     public int MaxProjectCount { get; private set; }
     public bool IsPublic { get; private set; }
 
+    public DateTime CreatedAt { get; private set; }
+
     private readonly List<Tag> _tags = new();
     private readonly List<PositionAttribute> _positionAttributes = new();
     private readonly List<AccessRule> _accessRules = new();
@@ -33,6 +35,7 @@ public sealed class Position : BaseEntity
         Description = description ?? string.Empty;
         MaxProjectCount = maxProjectCount;
         IsPublic = true;
+        CreatedAt = DateTime.UtcNow;
     }
 
     public void RenamePosition(string newName)
