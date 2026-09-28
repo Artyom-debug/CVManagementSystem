@@ -250,8 +250,7 @@ export function Attributes() {
       !selection ||
       actionLock.current ||
       selection.excluded.includes(a.id) ||
-      ((selection.kind === "profile" || selection.kind === "access-rule") &&
-        a.isSystem)
+      a.isSystem
     )
       return;
     actionLock.current = true;
@@ -259,6 +258,7 @@ export function Attributes() {
     setError(null);
     try {
       const detail = await api<Attribute>(`/attributes/${a.id}`);
+      if (detail.isSystem) return;
       if (selection.kind === "profile") {
         const profilePath = selection.profilePath || "/profiles/me";
         const profile = await api<Profile>(profilePath);
@@ -285,7 +285,6 @@ export function Attributes() {
       } else {
         const draft = selection.positionDraft;
         if (selection.kind === "access-rule") {
-          if (detail.isSystem) return;
           nav(safeReturnPath(selection.returnTo), {
             replace: true,
             state: {
@@ -505,9 +504,7 @@ export function Attributes() {
                     disabled={
                       busy ||
                       selection.excluded.includes(a.id) ||
-                      ((selection.kind === "profile" ||
-                        selection.kind === "access-rule") &&
-                        a.isSystem)
+                      a.isSystem
                     }
                     onClick={() => void choose(a)}
                   >

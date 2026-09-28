@@ -14,7 +14,10 @@
   <Folder Name="/Элементы решения/">
     <File Path=".dockerignore" />
     <File Path=".gitignore" />
+    <File Path="Client/Dockerfile" />
+    <File Path="compose.yaml" />
     <File Path="Dockerfile" />
-    <File Path="Web/compose.yaml" />
+    <File Path="README.md" />
+    <File Path="render.yaml" />
   </Folder>
 </Solution>

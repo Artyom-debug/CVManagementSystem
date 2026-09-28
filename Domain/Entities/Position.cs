@@ -10,7 +10,6 @@ public sealed class Position : BaseEntity
     public string? Description { get; private set; }
     public int MaxProjectCount { get; private set; }
     public bool IsPublic { get; private set; }
-
     public DateTime CreatedAt { get; private set; }
 
     private readonly List<Tag> _tags = new();

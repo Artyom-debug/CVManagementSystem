@@ -4,18 +4,15 @@ import {
   Outlet,
   Link,
   useNavigate,
-  useSearchParams,
   useLocation,
 } from "react-router-dom";
-import { Search, Sun, Moon, ArrowUpRight, Menu, X, LogOut } from "lucide-react";
+import { Sun, Moon, ArrowUpRight, Menu, X, LogOut } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApp } from "./lib/context";
 import { command, setTokens } from "./lib/api";
 import { ErrorNotice, Loading } from "./components/UI";
 export function Layout() {
   const { t, theme, setTheme, lang, setLang, user, admin } = useApp();
-  const [params] = useSearchParams();
-  const [search, setSearch] = useState(params.get("q") || "");
   const [menu, setMenu] = useState(false);
   const [error, setError] = useState<unknown>();
   const nav = useNavigate();
@@ -46,23 +43,6 @@ export function Layout() {
           )}
           {admin && <NavLink to="/admin">{t("Управление", "Admin")}</NavLink>}
         </nav>
-        <form
-          className="global-search"
-          onSubmit={(e) => {
-            e.preventDefault();
-            nav(`/?q=${encodeURIComponent(search)}`);
-          }}
-          role="search"
-        >
-          <Search size={16} />
-          <input
-            aria-label={t("Поиск позиций", "Search positions")}
-            placeholder={t("Поиск позиций…", "Search positions…")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <kbd>↵</kbd>
-        </form>
         <div className="header-actions">
           <button
             className="icon-button language"

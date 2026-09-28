@@ -303,35 +303,16 @@ input[type="checkbox"] {
   color: var(--ink);
   border-bottom-color: var(--ink);
 }
-.global-search {
-  display: flex;
-  gap: 10px;
-  margin-left: auto;
-  align-items: center;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  padding: 8px 10px;
-  border-radius: 5px;
-  width: 215px;
-}
-.global-search input {
-  width: 100%;
-  min-width: 0;
-  background: none;
-  border: 0;
-  outline: 0;
-  color: var(--ink);
-  font-size: 11px;
-}
-.global-search input::placeholder {
-  color: var(--muted);
-}
+
+
+
 kbd {
   background: var(--soft);
   color: var(--muted);
   font-size: 10px;
 }
 .header-actions {
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 15px;
@@ -1232,9 +1213,7 @@ kbd {
   .main-nav {
     gap: 18px;
   }
-  .global-search {
-    width: 165px;
-  }
+
   .header-actions {
     gap: 10px;
   }
@@ -1243,9 +1222,7 @@ kbd {
   }
 }
 @media (max-width: 900px) {
-  .global-search {
-    width: 180px;
-  }
+
   .main-nav {
     display: none;
   }
@@ -1291,11 +1268,7 @@ kbd {
   .header-actions {
     margin-left: auto;
   }
-  .global-search {
-    order: 3;
-    width: 100%;
-    margin: 0;
-  }
+
   .main-nav.open {
     top: 120px;
   }

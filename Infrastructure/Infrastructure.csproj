@@ -27,7 +27,6 @@
 
   <ItemGroup>
     <Folder Include="Data\Configurations\" />
-    <Folder Include="Services\Identity\" />
   </ItemGroup>
 
   <ItemGroup>
