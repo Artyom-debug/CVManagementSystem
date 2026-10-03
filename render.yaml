@@ -50,3 +50,9 @@ services:
         sync: false
       - key: Authentication__Facebook__AppSecret
         sync: false
+      - key: Salesforce__LoginUrl
+        sync: false
+      - key: Salesforce__ClientId
+        sync: false
+      - key: Salesforce__ClientSecret
+        sync: false

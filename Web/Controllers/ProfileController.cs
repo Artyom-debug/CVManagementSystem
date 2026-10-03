@@ -3,6 +3,7 @@ using Application.Commands.Profile;
 using Application.Common.Models;
 using Application.Constants;
 using Application.Dtos;
+using Application.Queries.Integrations;
 using Application.Queries.Profile;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,6 +27,13 @@ public sealed class ProfileController : ControllerBase
     public async Task<ActionResult<ProfileDto>> GetPersonal(CancellationToken cancellationToken)
     {
         return Ok(await _sender.Send(new GetPersonalProfileQuery(), cancellationToken));
+    }
+
+    [Authorize(Policy = Policies.ManagePersonalProfile)]
+    [HttpGet("{profileId:guid}/salesforce-prefill")]
+    public async Task<ActionResult<SalesForcePrefillDto>> GetSalesForcePrefill(Guid profileId, CancellationToken cancellationToken)
+    {
+        return Ok(await _sender.Send(new GetProfileAttributesForSalesForceQuery(profileId), cancellationToken));
     }
 
     [Authorize(Policy = Policies.ViewFullCandidateProfile)]

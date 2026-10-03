@@ -29,6 +29,7 @@ public static class DependencyInjection
         AddIdentity(builder);
         AddRedis(builder);
         AddCloudinary(builder);
+        AddSalesforce(builder);
     }
 
     private static void AddDatabase(IHostApplicationBuilder builder)
@@ -311,5 +312,11 @@ public static class DependencyInjection
         });
 
         builder.Services.AddSingleton<IImageStorage, ImageStorage>();
+    }
+
+    private static void AddSalesforce(IHostApplicationBuilder builder)
+    {
+        builder.Services.Configure<SalesforceOptions>(builder.Configuration.GetSection(SalesforceOptions.SectionName));
+        builder.Services.AddHttpClient<ISalesForceService, SalesforceService>(client => client.Timeout = TimeSpan.FromSeconds(30));
     }
 }
