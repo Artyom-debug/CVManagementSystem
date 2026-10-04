@@ -1,5 +1,8 @@
 id,name,model_id/id,group_id/id,perm_read,perm_write,perm_create,perm_unlink
-access_cv_position_import_reader,cv.position.import reader,model_cv_position_import,base.group_user,1,0,0,0
-access_cv_position_attribute_stat_reader,cv.position.attribute.stat reader,model_cv_position_attribute_stat,base.group_user,1,0,0,0
-access_cv_position_top_value_reader,cv.position.top.value reader,model_cv_position_top_value,base.group_user,1,0,0,0
+access_cv_position_import_reader,cv.position.import reader,model_cv_position_import,cv_position_stats.group_cv_position_stats_viewer,1,0,0,0
+access_cv_position_attribute_stat_reader,cv.position.attribute.stat reader,model_cv_position_attribute_stat,cv_position_stats.group_cv_position_stats_viewer,1,0,0,0
+access_cv_position_top_value_reader,cv.position.top.value reader,model_cv_position_top_value,cv_position_stats.group_cv_position_stats_viewer,1,0,0,0
+access_cv_position_import_admin,cv.position.import admin reader,model_cv_position_import,base.group_system,1,0,0,0
+access_cv_position_attribute_stat_admin,cv.position.attribute.stat admin reader,model_cv_position_attribute_stat,base.group_system,1,0,0,0
+access_cv_position_top_value_admin,cv.position.top.value admin reader,model_cv_position_top_value,base.group_system,1,0,0,0
 access_cv_position_import_wizard_admin,cv.position.import.wizard admin,model_cv_position_import_wizard,base.group_system,1,1,1,1

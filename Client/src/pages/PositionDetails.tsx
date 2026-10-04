@@ -1,5 +1,10 @@
+import { OdooIntegration } from "../components/Integrations";
 import { useRef, useState } from "react";
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { formatPositionDate } from "../lib/date";
 import { api, command } from "../lib/api";
@@ -137,6 +142,7 @@ export function PositionPage() {
             )
           }
         />
+        {manager && id && <OdooIntegration key={id} positionId={id} />}
         <Tags tags={p.tags} />
         {p.createdAt && (
           <time className="position-date" dateTime={p.createdAt}>

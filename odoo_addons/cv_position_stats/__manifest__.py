@@ -10,12 +10,13 @@ Imports position details and aggregated CV attribute statistics from CVManagemen
     'author': "CVManagementSystem",
 
     'category': 'Services',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
 
     'depends': ['base'],
     'external_dependencies': {'python': ['requests']},
 
     'data': [
+        'security/groups.xml',
         'security/ir.model.access.csv',
         'views/views.xml',
     ],

@@ -1,0 +1,6 @@
+<odoo>
+    <record id="group_cv_position_stats_viewer" model="res.groups">
+        <field name="name">CV Position Statistics Viewer</field>
+        <field name="comment">Read-only access to imported positions and CV statistics.</field>
+    </record>
+</odoo>

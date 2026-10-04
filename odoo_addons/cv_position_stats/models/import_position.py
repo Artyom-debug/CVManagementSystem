@@ -1,6 +1,7 @@
 import logging
 import math
 import os
+import re
 from datetime import date, datetime, timezone
 from urllib.parse import urlsplit
 from uuid import UUID
@@ -16,7 +17,7 @@ _ATTRIBUTE_TYPES = {
     "String", "Text", "Image", "Numeric", "Date", "Period", "Checkbox", "Dropdown"
 }
 _STATISTICS_PATH = "/api/odoo/position-statistics"
-_DEFAULT_API_URL = "https://cv-management-system-zk7q.onrender.com"
+_TOKEN_PATTERN = re.compile(r"odoo_[0-9A-F]{64}\Z")
 
 
 def _required_string(data, key):
@@ -65,7 +66,7 @@ class ImportPositionWizard(models.TransientModel):
     _description = "Import CV Position Statistics"
     _transient_max_hours = 0.1
 
-    api_token = fields.Char(string="Position API Token", required=True, copy=False)
+    api_token = fields.Char(string="Position API Token", required=True, copy=False, size=69)
 
     def action_import(self):
         self.ensure_one()
@@ -73,8 +74,11 @@ class ImportPositionWizard(models.TransientModel):
             raise UserError(_("Only an Odoo administrator can import positions."))
         if not self.api_token or not self.api_token.strip():
             raise UserError(_("Enter a position API token."))
+        token = self.api_token.strip()
+        if not _TOKEN_PATTERN.fullmatch(token):
+            raise UserError(_("The position API token has an invalid format."))
 
-        configured_url = os.environ.get("CV_MANAGEMENT_API_URL", _DEFAULT_API_URL).strip()
+        configured_url = os.environ.get("CV_MANAGEMENT_API_URL", "").strip()
         if not configured_url:
             raise UserError(_("Configure CV_MANAGEMENT_API_URL on the Odoo server."))
 
@@ -102,7 +106,7 @@ class ImportPositionWizard(models.TransientModel):
         try:
             response = requests.post(
                 api_url,
-                headers={"Authorization": "Bearer %s" % self.api_token.strip(),
+                headers={"Authorization": "Bearer %s" % token,
                          "Accept": "application/json"},
                 timeout=(5, 90),  
                 allow_redirects=False,

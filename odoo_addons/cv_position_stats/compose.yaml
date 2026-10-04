@@ -3,25 +3,33 @@ services:
     image: postgres:15
     environment:
       POSTGRES_USER: odoo
-      POSTGRES_PASSWORD: Pass123
+      POSTGRES_PASSWORD: ${ODOO_DB_PASSWORD:?Set ODOO_DB_PASSWORD in the Odoo Compose environment}
       POSTGRES_DB: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - odoo_pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
 
   odoo:
     image: odoo:19.0
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
-      - "8069:8069"
+      - "127.0.0.1:8069:8069"
     environment:
       HOST: db
       USER: odoo
-      PASSWORD: Pass123
-      CV_MANAGEMENT_API_URL: ${CV_MANAGEMENT_API_URL:-https://cv-management-system-zk7q.onrender.com}
+      PASSWORD: ${ODOO_DB_PASSWORD:?Set ODOO_DB_PASSWORD in the Odoo Compose environment}
+      CV_MANAGEMENT_API_URL: ${CV_MANAGEMENT_API_URL:?Set CV_MANAGEMENT_API_URL in the Odoo Compose environment}
     volumes:
       - odoo_data:/var/lib/odoo
       - ..:/mnt/extra-addons
+    restart: unless-stopped
 
 volumes:
   odoo_pg_data:

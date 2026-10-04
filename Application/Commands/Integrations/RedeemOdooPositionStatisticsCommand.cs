@@ -37,21 +37,24 @@ internal sealed class RedeemOdooPositionStatisticsCommandHandler : IRequestHandl
             .SingleOrDefaultAsync(item => item.Id == positionId, cancellationToken)
             ?? throw new UnauthorizedAccessException("The position is no longer available.");
 
-        var profileIds = await _context.CVs
+        var publishedCvCount = await _context.CVs
             .AsNoTracking()
             .Where(cv => cv.PositionId == position.Id && cv.Status == Status.Published)
-            .Select(cv => cv.ProfileId)
-            .ToListAsync(cancellationToken);
+            .CountAsync(cancellationToken);
 
         var attributeIds = position.PositionAttributes
             .Select(item => item.AttributeId)
             .ToArray();
 
-        var values = profileIds.Count == 0 || attributeIds.Length == 0 ? []
+        var values = publishedCvCount == 0 || attributeIds.Length == 0 ? []
             : await _context.ProfileAttributes
                 .AsNoTracking()
                 .Include(value => value.DropdownOption)
-                .Where(value => profileIds.Contains(value.ProfileId) && attributeIds.Contains(value.AttributeId))
+                .Where(value => attributeIds.Contains(value.AttributeId) &&
+                    _context.CVs.Any(cv =>
+                        cv.PositionId == position.Id &&
+                        cv.Status == Status.Published &&
+                        cv.ProfileId == value.ProfileId))
                 .ToListAsync(cancellationToken);
 
         var valuesByAttribute = values.ToLookup(value => value.AttributeId);
@@ -65,7 +68,7 @@ internal sealed class RedeemOdooPositionStatisticsCommandHandler : IRequestHandl
             position.Name,
             position.Description,
             position.CreatedAt,
-            profileIds.Count,
+            publishedCvCount,
             statistics);
 
         var redeemedPositionId = await _cache.TakeAsync<Guid?>(cacheKey, cancellationToken);

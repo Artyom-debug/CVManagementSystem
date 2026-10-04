@@ -54,7 +54,7 @@ class TestPositionImport(TransactionCase):
         }
 
     def test_import_and_refresh_existing_position(self):
-        first = self._wizard("odoo_first")
+        first = self._wizard("odoo_" + "A" * 64)
         with patch("requests.post", return_value=SimpleNamespace(
             status_code=200, json=lambda: self._payload()
         )) as post:
@@ -62,7 +62,7 @@ class TestPositionImport(TransactionCase):
 
         post.assert_called_once()
         self.assertEqual(post.call_args.args[0], self.url + "/api/odoo/position-statistics")
-        self.assertEqual(post.call_args.kwargs["headers"]["Authorization"], "Bearer odoo_first")
+        self.assertEqual(post.call_args.kwargs["headers"]["Authorization"], "Bearer odoo_" + "A" * 64)
         self.assertFalse(post.call_args.kwargs["allow_redirects"])
         self.assertFalse(first.exists())
 
@@ -83,7 +83,7 @@ class TestPositionImport(TransactionCase):
         with patch("requests.post", return_value=SimpleNamespace(
             status_code=200, json=lambda: updated
         )):
-            second = self._wizard("odoo_second")
+            second = self._wizard("odoo_" + "B" * 64)
             second_result = second.action_import()
 
         position.invalidate_recordset()
@@ -95,7 +95,7 @@ class TestPositionImport(TransactionCase):
         self.assertEqual(position.attribute_stat_ids.top_value_ids.name, "Hybrid")
 
     def test_invalid_token_does_not_create_position(self):
-        wizard = self._wizard("odoo_invalid")
+        wizard = self._wizard("odoo_" + "C" * 64)
         with patch("requests.post", return_value=SimpleNamespace(status_code=401)):
             with self.assertRaises(UserError):
                 wizard.action_import()
@@ -104,9 +104,24 @@ class TestPositionImport(TransactionCase):
         ]))
 
     def test_remote_http_url_is_rejected_before_sending_token(self):
-        wizard = self._wizard("odoo_secret")
+        wizard = self._wizard("odoo_" + "D" * 64)
         with patch.dict(os.environ, {"CV_MANAGEMENT_API_URL": "http://example.com"}):
             with patch("requests.post") as post:
                 with self.assertRaises(UserError):
                     wizard.action_import()
+        post.assert_not_called()
+
+    def test_missing_api_url_is_rejected_before_sending_token(self):
+        wizard = self._wizard("odoo_" + "E" * 64)
+        with patch.dict(os.environ, {"CV_MANAGEMENT_API_URL": ""}):
+            with patch("requests.post") as post:
+                with self.assertRaises(UserError):
+                    wizard.action_import()
+        post.assert_not_called()
+
+    def test_malformed_token_is_rejected_before_request(self):
+        wizard = self._wizard("not-an-odoo-token")
+        with patch("requests.post") as post:
+            with self.assertRaises(UserError):
+                wizard.action_import()
         post.assert_not_called()

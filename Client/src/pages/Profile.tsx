@@ -1,3 +1,4 @@
+import { SalesforceIntegration } from "../components/Integrations";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
@@ -327,6 +328,23 @@ function ProfileForm({
           )}
         </aside>
         <div className="profile-content">
+          {!readonly && (
+            <SalesforceIntegration
+              profileId={profile.id}
+              beforeOpen={async () => {
+                if (saves.incomplete.size)
+                  throw new UserMessage(
+                    t(
+                      "Завершите ввод даты перед отправкой.",
+                      "Complete the date before continuing.",
+                    ),
+                  );
+                do {
+                  await saves.flush();
+                } while (saves.pending.size);
+              }}
+            />
+          )}
           <fieldset disabled={busy}>
             {(systemOnly ? ["me"] : ["me", "info"]).map((section, i) => (
               <section className="panel" id={section} key={section}>

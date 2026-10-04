@@ -133,9 +133,11 @@
         <field name="target">new</field>
     </record>
 
-    <menuitem id="menu_cv_position_stats_root" name="CV Position Statistics" sequence="20"/>
+    <menuitem id="menu_cv_position_stats_root" name="CV Position Statistics" sequence="20"
+              groups="cv_position_stats.group_cv_position_stats_viewer,base.group_system"/>
     <menuitem id="menu_cv_position_imports" name="Imported Positions"
-              parent="menu_cv_position_stats_root" action="action_cv_position_imports" sequence="10"/>
+              parent="menu_cv_position_stats_root" action="action_cv_position_imports" sequence="10"
+              groups="cv_position_stats.group_cv_position_stats_viewer,base.group_system"/>
     <menuitem id="menu_cv_position_import_wizard" name="Import by Token"
               parent="menu_cv_position_stats_root" action="action_cv_position_import_wizard"
               groups="base.group_system" sequence="20"/>
