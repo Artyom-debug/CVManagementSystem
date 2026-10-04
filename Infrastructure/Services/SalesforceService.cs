@@ -1,8 +1,10 @@
 using Application.Dtos;
+using Application.Common.Exceptions;
 using Application.Interfaces;
 using Infrastructure.Models;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -58,7 +60,14 @@ public sealed class SalesforceService : ISalesForceService
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException($"Salesforce Account/Contact creation failed with HTTP {(int)response.StatusCode}. {GetErrorCodes(body)}", null, response.StatusCode);
+        {
+            var errorCodes = GetErrorCodes(body);
+            if (response.StatusCode == HttpStatusCode.BadRequest &&
+                errorCodes.Contains("DUPLICATES_DETECTED", StringComparer.Ordinal))
+                throw new SalesforceDuplicateException();
+
+            throw new HttpRequestException($"Salesforce Account/Contact creation failed with HTTP {(int)response.StatusCode}. {FormatErrorCodes(errorCodes)}", null, response.StatusCode);
+        }
 
         using var result = JsonDocument.Parse(body);
         if (!result.RootElement.TryGetProperty("hasErrors", out var hasErrors) ||
@@ -67,7 +76,7 @@ public sealed class SalesforceService : ISalesForceService
             results.ValueKind != JsonValueKind.Array ||
             results.GetArrayLength() != 2)
         {
-            throw new InvalidOperationException($"Salesforce did not confirm creation of both the Account and Contact. {GetErrorCodes(body)}");
+            throw new InvalidOperationException($"Salesforce did not confirm creation of both the Account and Contact. {FormatErrorCodes(GetErrorCodes(body))}");
         }
     }
 
@@ -84,7 +93,7 @@ public sealed class SalesforceService : ISalesForceService
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException($"Salesforce OAuth token request failed with HTTP {(int)response.StatusCode}. {GetErrorCodes(body)}", null, response.StatusCode);
+            throw new HttpRequestException($"Salesforce OAuth token request failed with HTTP {(int)response.StatusCode}. {FormatErrorCodes(GetErrorCodes(body))}", null, response.StatusCode);
 
         using var token = JsonDocument.Parse(body);
         var accessToken = GetString(token.RootElement, "access_token");
@@ -149,7 +158,7 @@ public sealed class SalesforceService : ISalesForceService
             ? value.GetString()
             : null;
 
-    private static string GetErrorCodes(string body)
+    private static string[] GetErrorCodes(string body)
     {
         try
         {
@@ -157,12 +166,18 @@ public sealed class SalesforceService : ISalesForceService
             var codes = new List<string>();
             CollectErrorCodes(document.RootElement, codes);
 
-            return codes.Count == 0 ? string.Empty : $"Error code: {string.Join(", ", codes.Distinct())}.";
+            return codes.Distinct(StringComparer.Ordinal).ToArray();
         }
         catch (JsonException)
         {
-            return string.Empty;
+            return [];
         }
+    }
+
+    private static string FormatErrorCodes(IEnumerable<string> codes)
+    {
+        var values = codes.ToArray();
+        return values.Length == 0 ? string.Empty : $"Error code: {string.Join(", ", values)}.";
     }
 
     private static void CollectErrorCodes(JsonElement element, List<string> codes)

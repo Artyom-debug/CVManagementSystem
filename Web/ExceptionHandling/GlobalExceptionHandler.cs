@@ -62,6 +62,11 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 "Concurrency conflict.",
                 "The resource was changed by another request. Reload it and try again."),
 
+            SalesforceDuplicateException => (
+                StatusCodes.Status409Conflict,
+                "Duplicate Salesforce record.",
+                exception.Message),
+
             ArgumentException => (
                 StatusCodes.Status400BadRequest,
                 "Invalid request.",

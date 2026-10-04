@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Application.Commands.Integrations;
 using Application.Commands.Profile;
+using Application.Common.Exceptions;
 using Application.Common.Models;
 using Application.Constants;
 using Application.Dtos;
@@ -39,11 +40,20 @@ public sealed class ProfileController : ControllerBase
 
     [Authorize(Policy = Policies.ManagePersonalProfile)]
     [HttpPost("{profileId:guid}/salesforce")]
-    public Task<ActionResult<Result>> CreateSalesForceAccountWithContact(
+    public async Task<ActionResult<Result>> CreateSalesForceAccountWithContact(
         Guid profileId,
         [FromBody] SalesForceDto data,
-        CancellationToken cancellationToken) =>
-        SendCommand(new SalesForceIntegrationCommand(profileId, data), cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await SendCommand(new SalesForceIntegrationCommand(profileId, data), cancellationToken);
+        }
+        catch (SalesforceDuplicateException exception)
+        {
+            return Conflict(Result.Failure(exception.Message));
+        }
+    }
 
     [Authorize(Policy = Policies.ViewFullCandidateProfile)]
     [HttpGet("{profileId:guid}")]

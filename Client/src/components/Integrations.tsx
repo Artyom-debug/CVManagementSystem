@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { UserMessage } from "../lib/errors";
-import { api, command } from "../lib/api";
+import { ApiError, api, command } from "../lib/api";
 import { useApp } from "../lib/context";
 import { ErrorNotice, Field } from "./UI";
 
@@ -69,7 +69,16 @@ export function SalesforceIntegration({
       );
       setSent(true);
     } catch (e) {
-      setError(e);
+      setError(
+        e instanceof ApiError && e.status === 409
+          ? new UserMessage(
+              t(
+                "В Salesforce уже есть похожая организация или контакт. Проверьте существующие записи перед повторной отправкой.",
+                "A matching organization or contact already exists in Salesforce. Review the existing records before submitting again.",
+              ),
+            )
+          : e,
+      );
     } finally {
       lock.current = false;
       setBusy(false);
