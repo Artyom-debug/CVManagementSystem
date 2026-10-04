@@ -53,6 +53,12 @@ public sealed class PositionsController : ControllerBase
         SendCommand(command, cancellationToken);
 
     [Authorize(Policy = Policies.ManagePositions)]
+    [HttpPost("{positionId:guid}/odoo-token")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<ActionResult<PositionOdooTokenDto>> GenerateOdooToken(Guid positionId, CancellationToken cancellationToken) =>
+        Ok(await _sender.Send(new GeneratePositionOdooTokenCommand(positionId), cancellationToken));
+
+    [Authorize(Policy = Policies.ManagePositions)]
     [HttpGet("{positionId:guid}/cvs")]
     public async Task<ActionResult<PageResult<PositionCVDto>>> GetCVs(Guid positionId, [FromQuery] int page = 1, [FromQuery] int pageSize = 30, CancellationToken cancellationToken = default) =>
         Ok(await _sender.Send(new GetPositionCVsQuery(positionId, page, pageSize), cancellationToken));

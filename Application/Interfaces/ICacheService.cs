@@ -10,6 +10,8 @@ public interface ICacheService
 {
     Task<T?> GetAsync<T>(string key, CancellationToken token);
 
+    Task<T?> TakeAsync<T>(string key, CancellationToken token);
+
     Task SetAsync<T>(string key, T value, TimeSpan expiration,  CancellationToken token, IEnumerable<string>? dependencies = null);
 
     Task RemoveAsync(string key, CancellationToken token);

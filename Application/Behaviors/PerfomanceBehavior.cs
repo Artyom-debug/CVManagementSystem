@@ -41,7 +41,8 @@ public class PerformanceBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
             var userId = _user.Id ?? string.Empty;
             var userName = string.Empty;
 
-            _logger.LogWarning("Application Long Running Request: {Name} ({ElapsedMilliseconds} milliseconds) {@UserId} {@UserName} {@Request}", requestName, elapsedMilliseconds, userId, userName, request);
+            // Requests can contain passwords and API tokens; log only metadata.
+            _logger.LogWarning("Application Long Running Request: {Name} ({ElapsedMilliseconds} milliseconds) {UserId} {UserName}", requestName, elapsedMilliseconds, userId, userName);
         }
 
         return response;

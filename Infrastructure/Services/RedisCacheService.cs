@@ -30,6 +30,22 @@ public sealed class RedisCacheService : ICacheService
         return JsonSerializer.Deserialize<T>(json.ToString());
     }
 
+    public async Task<T?> TakeAsync<T>(string key, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            throw new ArgumentException("Cache key cannot be empty.", nameof(key));
+        token.ThrowIfCancellationRequested();
+
+        var json = await _database
+            .StringGetDeleteAsync(key)
+            .WaitAsync(token);
+
+        if (json.IsNullOrEmpty)
+            return default;
+
+        return JsonSerializer.Deserialize<T>(json.ToString());
+    }
+
     public async Task SetAsync<T>(string key, T value, TimeSpan expiration, CancellationToken token, IEnumerable<string>? dependencies = null)
     {
         if (string.IsNullOrWhiteSpace(key))

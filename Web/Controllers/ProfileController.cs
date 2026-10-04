@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Application.Commands.Integrations;
 using Application.Commands.Profile;
 using Application.Common.Models;
 using Application.Constants;
@@ -35,6 +36,14 @@ public sealed class ProfileController : ControllerBase
     {
         return Ok(await _sender.Send(new GetProfileAttributesForSalesForceQuery(profileId), cancellationToken));
     }
+
+    [Authorize(Policy = Policies.ManagePersonalProfile)]
+    [HttpPost("{profileId:guid}/salesforce")]
+    public Task<ActionResult<Result>> CreateSalesForceAccountWithContact(
+        Guid profileId,
+        [FromBody] SalesForceDto data,
+        CancellationToken cancellationToken) =>
+        SendCommand(new SalesForceIntegrationCommand(profileId, data), cancellationToken);
 
     [Authorize(Policy = Policies.ViewFullCandidateProfile)]
     [HttpGet("{profileId:guid}")]

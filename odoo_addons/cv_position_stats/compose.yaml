@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: Pass123
+      POSTGRES_DB: postgres
+    volumes:
+      - odoo_pg_data:/var/lib/postgresql/data
+
+  odoo:
+    image: odoo:19.0
+    depends_on:
+      - db
+    ports:
+      - "8069:8069"
+    environment:
+      HOST: db
+      USER: odoo
+      PASSWORD: Pass123
+      CV_MANAGEMENT_API_URL: ${CV_MANAGEMENT_API_URL:-https://cv-management-system-zk7q.onrender.com}
+    volumes:
+      - odoo_data:/var/lib/odoo
+      - ..:/mnt/extra-addons
+
+volumes:
+  odoo_pg_data:
+  odoo_data:

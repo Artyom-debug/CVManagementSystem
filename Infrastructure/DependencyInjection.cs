@@ -130,6 +130,14 @@ public static class DependencyInjection
 
                 options.Events = new JwtBearerEvents
                 {
+                    // This route uses a position-scoped API token, not a user JWT.
+                    OnMessageReceived = context =>
+                    {
+                        if (context.Request.Path.StartsWithSegments("/api/odoo/position-statistics"))
+                            context.NoResult();
+
+                        return Task.CompletedTask;
+                    },
                     OnTokenValidated = ValidateSecurityStampAsync
                 };
             });
