@@ -1,3 +1,4 @@
+import { SupportTicket } from "./components/SupportTicket";
 import { useEffect, useState, Suspense } from "react";
 import {
   NavLink,
@@ -6,13 +7,22 @@ import {
   useNavigate,
   useLocation,
 } from "react-router-dom";
-import { Sun, Moon, ArrowUpRight, Menu, X, LogOut } from "lucide-react";
+import {
+  CircleHelp,
+  Sun,
+  Moon,
+  ArrowUpRight,
+  Menu,
+  X,
+  LogOut,
+} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApp } from "./lib/context";
 import { command, setTokens } from "./lib/api";
 import { ErrorNotice, Loading } from "./components/UI";
 export function Layout() {
   const { t, theme, setTheme, lang, setLang, user, admin } = useApp();
+  const [supportOpen, setSupportOpen] = useState(false);
   const [menu, setMenu] = useState(false);
   const [error, setError] = useState<unknown>();
   const nav = useNavigate();
@@ -44,6 +54,14 @@ export function Layout() {
           {admin && <NavLink to="/admin">{t("Управление", "Admin")}</NavLink>}
         </nav>
         <div className="header-actions">
+          <button
+            className="icon-button"
+            aria-label={t("Помощь", "Help")}
+            title={t("Помощь", "Help")}
+            onClick={() => setSupportOpen(true)}
+          >
+            <CircleHelp size={20} />
+          </button>
           <button
             className="icon-button language"
             onClick={() => setLang(lang === "ru" ? "en" : "ru")}
@@ -109,7 +127,16 @@ export function Layout() {
       </main>
       <footer className="app-footer">
         <small>CV WORKSPACE / 2026</small>
+        <button className="support-link" onClick={() => setSupportOpen(true)}>
+          {t("Создать обращение в поддержку", "Create support ticket")}
+        </button>
       </footer>
+      {supportOpen && (
+        <SupportTicket
+          key={location.key}
+          onClose={() => setSupportOpen(false)}
+        />
+      )}
     </>
   );
 }

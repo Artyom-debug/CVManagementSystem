@@ -304,8 +304,6 @@ input[type="checkbox"] {
   border-bottom-color: var(--ink);
 }
 
-
-
 kbd {
   background: var(--soft);
   color: var(--muted);
@@ -1222,7 +1220,6 @@ kbd {
   }
 }
 @media (max-width: 900px) {
-
   .main-nav {
     display: none;
   }
@@ -1578,4 +1575,36 @@ kbd {
 .data-table td {
   padding-top: 18px;
   padding-bottom: 18px;
+}
+
+.support-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 28px;
+}
+.support-dialog::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+.support-dialog .section-heading {
+  margin-top: 0;
+}
+.support-dialog .section-heading h2 {
+  font-size: 1.3rem;
+}
+.support-context {
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+}
+.support-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--muted);
+  text-decoration: underline;
+  cursor: pointer;
 }
