@@ -49,6 +49,27 @@ public sealed class IdentityService : IIdentityService
             .Where(user => userIds.Contains(user.Id) && user.Email != null)
             .ToDictionaryAsync(user => user.Id, user => user.Email!, cancellationToken);
 
+    public async Task<IReadOnlyList<string>> GetAdministratorEmailsAsync(CancellationToken cancellationToken)
+    {
+        var role = await _roleManager.FindByNameAsync(Roles.Administrator);
+        if (role is null)
+            return [];
+
+        var now = DateTimeOffset.UtcNow;
+        return await _context.UserRoles.AsNoTracking()
+            .Where(userRole => userRole.RoleId == role.Id)
+            .Join(_context.Users.AsNoTracking(),
+                userRole => userRole.UserId,
+                user => user.Id,
+                (_, user) => user)
+            .Where(user => user.EmailConfirmed && user.Email != null &&
+                           (user.LockoutEnd == null || user.LockoutEnd <= now))
+            .Select(user => user.Email!)
+            .Distinct()
+            .OrderBy(email => email)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> IsInRoleAsync(string userId, string role)
     {
         var user = await FindUserAsync(userId);

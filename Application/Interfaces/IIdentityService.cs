@@ -6,6 +6,7 @@ namespace Application.Interfaces;
 public interface IIdentityService
 {
     Task<IReadOnlyDictionary<string, string>> GetUserEmailsAsync(IReadOnlyCollection<string> userIds, CancellationToken cancellationToken);
+    Task<IReadOnlyList<string>> GetAdministratorEmailsAsync(CancellationToken cancellationToken);
     Task<string?> GetUserNameAsync(string userId);
 
     Task<bool> IsInRoleAsync(string userId, string role);

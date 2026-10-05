@@ -67,6 +67,11 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 "Duplicate Salesforce record.",
                 exception.Message),
 
+            SupportTicketDeliveryException => (
+                StatusCodes.Status502BadGateway,
+                "Support ticket delivery failed.",
+                exception.Message),
+
             ArgumentException => (
                 StatusCodes.Status400BadRequest,
                 "Invalid request.",

@@ -56,3 +56,11 @@ services:
         sync: false
       - key: Salesforce__ClientSecret
         sync: false
+      - key: Dropbox__AppKey
+        sync: false
+      - key: Dropbox__AppSecret
+        sync: false
+      - key: Dropbox__RefreshToken
+        sync: false
+      - key: Dropbox__Folder
+        value: /SupportTickets

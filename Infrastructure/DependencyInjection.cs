@@ -30,6 +30,7 @@ public static class DependencyInjection
         AddRedis(builder);
         AddCloudinary(builder);
         AddSalesforce(builder);
+        AddDropbox(builder);
     }
 
     private static void AddDatabase(IHostApplicationBuilder builder)
@@ -326,5 +327,12 @@ public static class DependencyInjection
     {
         builder.Services.Configure<SalesforceOptions>(builder.Configuration.GetSection(SalesforceOptions.SectionName));
         builder.Services.AddHttpClient<ISalesForceService, SalesforceService>(client => client.Timeout = TimeSpan.FromSeconds(30));
+    }
+
+    private static void AddDropbox(IHostApplicationBuilder builder)
+    {
+        builder.Services.Configure<DropboxOptions>(builder.Configuration.GetSection(DropboxOptions.SectionName));
+        builder.Services.AddHttpClient<ISupportTicketFileService, DropboxSupportTicketFileService>(client =>
+            client.Timeout = TimeSpan.FromSeconds(30));
     }
 }

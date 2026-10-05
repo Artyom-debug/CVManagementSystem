@@ -92,6 +92,10 @@ does not provision PostgreSQL or Redis.
    GoogleGmail__RefreshToken=YOUR_GMAIL_REFRESH_TOKEN
    GoogleGmail__SenderEmail=YOUR_SENDER_EMAIL
    GoogleGmail__ConfirmationUrl=http://localhost:3000/api/auth/confirm-email
+   Dropbox__AppKey=YOUR_DROPBOX_APP_KEY
+   Dropbox__AppSecret=YOUR_DROPBOX_APP_SECRET
+   Dropbox__RefreshToken=YOUR_DROPBOX_REFRESH_TOKEN
+   Dropbox__Folder=/SupportTickets
    ```
 
    `Cloudinary__UploadPreset` is optional for the signed upload flow. Add
@@ -111,6 +115,43 @@ does not provision PostgreSQL or Redis.
 At startup the server applies EF Core migrations and seeds the predefined
 roles, administrator, and system attributes. PostgreSQL must permit the
 `pg_trgm` extension used by the database model.
+
+## Support tickets through Dropbox and Power Automate
+
+Create a scoped Dropbox app with **Full Dropbox** file access and the
+`files.content.write` permission. Authorize it for the same Dropbox account
+used by the Power Automate Dropbox connection, requesting offline access so
+the app receives a refresh token. Put the app key, app secret, and refresh
+token in the server settings above; never put them in the browser or commit
+them. Create `/SupportTickets` in that Dropbox account and select exactly
+that folder in the Power Automate "When a file is created (properties only)"
+trigger. An App Folder-scoped Dropbox app instead interprets paths relative
+to its app folder, so its trigger folder must be adjusted accordingly.
+
+Authenticated clients submit `POST /api/support-tickets` with a body such as:
+
+```json
+{
+  "summary": "Cannot submit a CV",
+  "priority": "High",
+  "pageUrl": "https://example.com/positions/123",
+  "positionId": null
+}
+```
+
+`priority` can be `High`, `Average`, or `Low`. Set `positionId` to an existing
+position ID only when the ticket concerns that position. The API supplies
+the reporter's email and role, position title, and administrator email
+addresses from server-side data. It uploads a unique JSON file with these
+camel-case fields: `summary`, `reportedBy`, `position`, `link`, `priority`, and
+`adminEmails` (an array of strings). Match the Power Automate Parse JSON
+schema to this file. Use a Join action with `;` as the delimiter before
+placing `adminEmails` in the mail action's To field. The endpoint reports a
+delivery failure if Dropbox rejects the file; it does not claim that the
+Power Automate email was delivered.
+
+For a local contract check, run
+`dotnet run --project Tests/SupportTicketRegression/SupportTicketRegression.csproj`.
 
 <details>
 <summary><strong>Develop without Docker</strong></summary>
