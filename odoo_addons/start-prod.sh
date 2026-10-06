@@ -23,16 +23,16 @@ esac
 
 export PORT="${ODOO_DB_PORT:-5432}"
 
-exec /entrypoint.sh \
-    --http-port="$http_port" \
-    --proxy-mode \
-    --database="$ODOO_DB_NAME" \
-    --db-filter="^${ODOO_DB_NAME}$" \
-    --no-database-list
-
 if [ "${ODOO_INIT_DB:-false}" = "true" ]; then
     /entrypoint.sh \
         --database="$ODOO_DB_NAME" \
         --init=base,cv_position_stats \
         --stop-after-init
 fi
+
+exec /entrypoint.sh \
+    --http-port="$http_port" \
+    --proxy-mode \
+    --database="$ODOO_DB_NAME" \
+    --db-filter="^${ODOO_DB_NAME}$" \
+    --no-database-list
