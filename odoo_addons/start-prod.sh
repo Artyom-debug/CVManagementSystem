@@ -1,4 +1,3 @@
-#!/bin/sh
 set -eu
 
 : "${HOST:?Set HOST to the Odoo PostgreSQL hostname}"
@@ -22,7 +21,6 @@ case "$http_port" in
         ;;
 esac
 
-# Render reserves PORT for HTTP, while the official Odoo entrypoint reads PORT as PostgreSQL.
 export PORT="${ODOO_DB_PORT:-5432}"
 
 exec /entrypoint.sh \
@@ -31,3 +29,10 @@ exec /entrypoint.sh \
     --database="$ODOO_DB_NAME" \
     --db-filter="^${ODOO_DB_NAME}$" \
     --no-database-list
+
+if [ "${ODOO_INIT_DB:-false}" = "true" ]; then
+    /entrypoint.sh \
+        --database="$ODOO_DB_NAME" \
+        --init=base,cv_position_stats \
+        --stop-after-init
+fi
