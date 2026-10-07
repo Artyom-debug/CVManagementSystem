@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="docs/forma-banner.svg" alt="Forma — profiles, positions, and CVs in one workspace" width="100%">
-
 ### Shape a profile. Find a position. Publish a CV.
 
 A role-aware workspace for candidates, recruiters, and administrators.
@@ -14,11 +12,11 @@ A role-aware workspace for candidates, recruiters, and administrators.
   <img src="https://img.shields.io/badge/Docker-ready-3f4550?style=flat&logo=docker&logoColor=c9d1d9" alt="Docker ready">
 </p>
 
-[Live demo](https://cv-management-system-zk7q.onrender.com/) · [Run locally](#run-it) · [Architecture](#architecture)
+[Live demo](https://cv-management-system-zk7q.onrender.com/) · [Run locally](#run-it) 
 
 </div>
 
-Forma is a CV management system built around a shared library of typed attributes.
+CV management system built around a shared library of typed attributes.
 Candidates maintain a profile and projects; recruiters assemble positions from
 attributes, tags, and access rules. A CV connects one profile to one position and
 can be published when every attribute in its template has a value.
