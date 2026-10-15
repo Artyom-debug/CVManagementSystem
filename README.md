@@ -2,8 +2,6 @@
 
 ### Shape a profile. Find a position. Publish a CV.
 
-A role-aware workspace for candidates, recruiters, and administrators.
-
 <p>
   <img src="https://img.shields.io/badge/.NET-9-3f4550?style=flat&logo=dotnet&logoColor=c9d1d9" alt=".NET 9">
   <img src="https://img.shields.io/badge/React-19-3f4550?style=flat&logo=react&logoColor=c9d1d9" alt="React 19">
